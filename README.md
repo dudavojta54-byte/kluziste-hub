@@ -70,7 +70,7 @@ Všechno prochází stejnými RPC funkcemi jako aplikace.
 | `RESEND_API_KEY`, `EMAIL_FROM` | server | e-mailová upozornění (ověřená doména v Resend) |
 | `CRON_SECRET` | server | náhodný řetězec; Vercel Cron ho posílá v hlavičce |
 
-3. `vercel.json` spouští odesílání e-mailové fronty každých 10 minut. Na plánu **Hobby** Vercel
+3. `vercel.json` spouští odesílání e-mailové fronty jednou denně (6:00 UTC) – víc plán **Hobby** nedovolí. Pro častější odesílání (Vercel Pro)
    povoluje jen denní cron – použijte Pro, nebo volejte `/api/cron/emails` (s hlavičkou
    `Authorization: Bearer $CRON_SECRET`) z externího plánovače / Supabase `pg_cron` + `pg_net`.
 
