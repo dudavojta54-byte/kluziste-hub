@@ -1,0 +1,18 @@
+<!-- Supabase → Authentication → Email Templates → Reset password
+     Předmět: Obnovení hesla – Instructor Hub -->
+<div style="font-family:Arial,Helvetica,sans-serif;max-width:520px;margin:0 auto;color:#1e293b">
+  <div style="background:#1e3a6e;color:#e0f2fe;padding:20px 24px;border-radius:12px 12px 0 0">
+    <strong style="font-size:18px">Kluziště Praha · Instructor Hub</strong>
+  </div>
+  <div style="border:1px solid #e2e8f0;border-top:0;padding:24px;border-radius:0 0 12px 12px">
+    <p>Dobrý den,</p>
+    <p>obdrželi jsme žádost o obnovení hesla k vašemu účtu.</p>
+    <p style="text-align:center;margin:28px 0">
+      <a href="{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=recovery"
+         style="background:#0284c7;color:#fff;padding:12px 22px;border-radius:8px;text-decoration:none;font-weight:bold">
+        Nastavit nové heslo
+      </a>
+    </p>
+    <p style="color:#64748b;font-size:13px">Pokud jste o obnovení nežádali, e-mail ignorujte – vaše heslo zůstává beze změny.</p>
+  </div>
+</div>
