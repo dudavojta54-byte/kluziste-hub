@@ -22,7 +22,7 @@ export async function inviteUser(input: unknown): Promise<Result> {
       redirectTo: `${siteUrl()}/auth/confirm`,
     });
     if (error) {
-      return { ok: false, error: error.message.includes("already") ? "Uživatel s tímto e-mailem už existuje." : error.message };
+      return { ok: false, error: error.message.includes("already") ? "Uživatel s tímto e-mailem už existuje." : rateLimitMessage(error.message) };
     }
     // Trigger v DB založil profil s rolí instruktor; vyšší roli přidělíme zde (ověřeno, že volá admin).
     if (v.role !== "instructor" && data.user) {
@@ -36,6 +36,54 @@ export async function inviteUser(input: unknown): Promise<Result> {
   }
 }
 
+function rateLimitMessage(msg: string) {
+  return /rate limit/i.test(msg)
+    ? "Supabase dočasně omezil odesílání e-mailů. Použijte tlačítko „Vytvořit odkaz“ a pošlete odkaz sami."
+    : msg;
+}
+
+type LinkResult = { ok: true; link: string; message: string } | { ok: false; error: string };
+
+/**
+ * Odkaz pozvánky BEZ odeslání e-mailu (obchází limit e-mailů Supabase).
+ * Nový uživatel: založí účet (invite). Existující, kdo se ještě nepřihlásil: odkaz pro nastavení hesla.
+ * Odkaz vede na /auth/confirm (token_hash), tedy nezávisí na e-mailových šablonách.
+ */
+export async function createInviteLink(input: unknown): Promise<LinkResult> {
+  try {
+    await assertRole("admin");
+    const v = inviteSchema.parse(input);
+    const email = v.email.toLowerCase();
+    const admin = createSupabaseAdmin();
+
+    let res = await admin.auth.admin.generateLink({
+      type: "invite",
+      email,
+      options: { data: { first_name: v.first_name, last_name: v.last_name } },
+    });
+    let type: "invite" | "recovery" = "invite";
+    if (res.error && /already|registered|exists/i.test(res.error.message)) {
+      res = await admin.auth.admin.generateLink({ type: "recovery", email });
+      type = "recovery";
+    }
+    if (res.error || !res.data.properties) return { ok: false, error: res.error?.message ?? "Odkaz se nepodařilo vytvořit." };
+
+    if (type === "invite" && v.role !== "instructor" && res.data.user) {
+      const roles = v.role === "admin" ? ["admin", "instructor"] : ["coordinator", "instructor"];
+      const { error: rErr } = await admin.from("user_roles").upsert(roles.map((role) => ({ user_id: res.data.user!.id, role })));
+      if (rErr) return { ok: false, error: rErr.message };
+    }
+    const link = `${siteUrl()}/auth/confirm?token_hash=${encodeURIComponent(res.data.properties.hashed_token)}&type=${type}`;
+    return {
+      ok: true,
+      link,
+      message: type === "invite" ? `Účet pro ${email} je založený.` : `${email} už účet má – odkaz slouží k nastavení hesla.`,
+    };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : "Odkaz se nepodařilo vytvořit." };
+  }
+}
+
 /** Znovu odeslat pozvánku / odkaz pro nastavení hesla. */
 export async function resendInvite(email: string): Promise<Result> {
   try {
@@ -44,7 +92,7 @@ export async function resendInvite(email: string): Promise<Result> {
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
       redirectTo: `${siteUrl()}/auth/confirm?next=/auth/nastavit-heslo`,
     });
-    if (error) return { ok: false, error: error.message };
+    if (error) return { ok: false, error: rateLimitMessage(error.message) };
     return { ok: true, message: `Odkaz pro nastavení hesla odeslán na ${email}.` };
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : "Chyba" };

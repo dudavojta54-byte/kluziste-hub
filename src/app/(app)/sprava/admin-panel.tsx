@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { MailPlus, Plus, RotateCcw, Save, Trash2, UserCheck, UserX } from "lucide-react";
+import { Copy, Link2, MailPlus, Plus, RotateCcw, Save, Trash2, UserCheck, UserX } from "lucide-react";
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
 import { Field, LoadingList, NativeSelect, PageHeader, Spinner, ToneBadge, TypeDot, UserAvatar } from "@/components/common";
@@ -17,7 +17,8 @@ import { useContacts, useLessonTypes, useLocations, useRpc, useTableMutation, us
 import { getSupabase } from "@/lib/supabase/client";
 import type { AppRole, Contact, ContactCategory } from "@/lib/types";
 import { cn } from "@/lib/utils";
-import { inviteUser, listUserEmails, resendInvite, setUserActive } from "./actions";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { createInviteLink, inviteUser, listUserEmails, resendInvite, setUserActive } from "./actions";
 
 const TABS = [
   ["users", "Uživatelé"], ["locations", "Lokality"], ["types", "Programy a kredity"],
@@ -63,8 +64,20 @@ function Users() {
       qc.invalidateQueries({ queryKey: ["admin"] });
     });
 
+  const [linkInfo, setLinkInfo] = useState<{ link: string; message: string } | null>(null);
+  const makeLink = (input: { email: string; first_name: string; last_name: string; role: AppRole }, resetForm = false) =>
+    start(async () => {
+      const r = await createInviteLink(input);
+      if (!r.ok) { toast.error(r.error); return; }
+      setLinkInfo({ link: r.link, message: r.message });
+      if (resetForm) setF({ email: "", first_name: "", last_name: "", role: "instructor" });
+      qc.invalidateQueries({ queryKey: ["team"] });
+      qc.invalidateQueries({ queryKey: ["admin"] });
+    });
+
   return (
     <div className="space-y-6">
+      <InviteLinkDialog info={linkInfo} onClose={() => setLinkInfo(null)} />
       <Card className="gap-3 p-4 sm:p-5">
         <h2 className="flex items-center gap-2 font-semibold"><MailPlus className="size-4" /> Pozvat nového člena</h2>
         <div className="grid gap-3 sm:grid-cols-5 sm:items-end">
@@ -79,11 +92,20 @@ function Users() {
             </NativeSelect>
           </Field>
         </div>
+        <div className="flex flex-wrap gap-2">
         <Button className="w-fit" disabled={pending || !f.email || !f.first_name || !f.last_name}
           onClick={() => run(async () => { const r = await inviteUser(f); if (r.ok) setF({ email: "", first_name: "", last_name: "", role: "instructor" }); return r; })}>
           {pending ? <Spinner /> : <MailPlus />} Odeslat pozvánku
         </Button>
-        <p className="text-xs text-muted-foreground">Uživatel dostane e-mail s odkazem pro nastavení hesla. Veřejná registrace je vypnutá.</p>
+        <Button variant="outline" className="w-fit" disabled={pending || !f.email || !f.first_name || !f.last_name}
+          onClick={() => makeLink(f, true)}>
+          <Link2 /> Vytvořit odkaz (bez e-mailu)
+        </Button>
+        </div>
+        <p className="text-xs text-muted-foreground">
+          „Odeslat pozvánku“ pošle e-mail. „Vytvořit odkaz“ jen založí účet a ukáže odkaz, který pošlete sami (WhatsApp, SMS) –
+          hodí se, když Supabase omezí počet e-mailů. Veřejná registrace je vypnutá.
+        </p>
       </Card>
 
       <Card className="gap-0 p-0">
@@ -126,7 +148,13 @@ function Users() {
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-1">
                           {info && !info.last_sign_in_at && p.is_active && (
-                            <Button variant="ghost" size="sm" disabled={pending} onClick={() => run(() => resendInvite(info.email))}><RotateCcw /> Znovu poslat</Button>
+                            <>
+                              <Button variant="ghost" size="sm" disabled={pending} onClick={() => run(() => resendInvite(info.email))}><RotateCcw /> Znovu poslat</Button>
+                              <Button variant="ghost" size="sm" disabled={pending}
+                                onClick={() => makeLink({ email: info.email, first_name: p.first_name || "-", last_name: p.last_name || "-", role: "instructor" })}>
+                                <Link2 /> Odkaz
+                              </Button>
+                            </>
                           )}
                           {p.id !== me.id && (p.is_active ? (
                             <Button variant="ghost" size="sm" className="text-destructive" disabled={pending}
@@ -318,5 +346,31 @@ function Audit() {
         </div>
       )}
     </Card>
+  );
+}
+
+function InviteLinkDialog({ info, onClose }: { info: { link: string; message: string } | null; onClose: () => void }) {
+  const copy = async () => {
+    if (!info) return;
+    try {
+      await navigator.clipboard.writeText(info.link);
+      toast.success("Odkaz zkopírován.");
+    } catch {
+      toast.error("Kopírování se nezdařilo – označte odkaz a zkopírujte ho ručně.");
+    }
+  };
+  return (
+    <Dialog open={!!info} onOpenChange={(o) => { if (!o) onClose(); }}>
+      <DialogContent className="sm:max-w-lg">
+        <DialogHeader><DialogTitle>Odkaz pozvánky</DialogTitle></DialogHeader>
+        <p className="text-sm text-muted-foreground">{info?.message} Pošlete tento odkaz jen dané osobě – po otevření si nastaví heslo.
+          Odkaz je jednorázový a platí omezenou dobu (výchozí 1 hodina, lze změnit v Supabase).</p>
+        <Input readOnly value={info?.link ?? ""} onFocus={(e) => e.currentTarget.select()} className="font-mono text-xs" />
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>Zavřít</Button>
+          <Button onClick={copy}><Copy /> Kopírovat odkaz</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
