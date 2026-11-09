@@ -1,0 +1,755 @@
+<!doctype html>
+<html lang="cs">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>Příručka instruktora bruslení</title>
+<script>
+/* Sladění světlého/tmavého režimu s aplikací (stránka běží v rámu Instructor Hubu) */
+(function(){try{var d=parent.document.documentElement;if(d===document.documentElement)return;
+var set=function(){document.documentElement.setAttribute("data-theme",d.classList.contains("dark")?"dark":"light")};
+set();new MutationObserver(set).observe(d,{attributes:true,attributeFilter:["class"]});}catch(e){}})();
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Mono:wght@500&display=swap">
+<style>
+/* Layout: kluziště jako mřížka — sekce oddělené „čarami“ jako na ledě (červená střední, modré čáry), obsah v jednom sloupci s kartami pro hry a cvičení */
+:root{
+  --bg:#edf3f7;
+  --surface:#ffffff;
+  --surface-2:#f5f9fb;
+  --ink:#0f2233;
+  --muted:#556777;
+  --line:#d2dfe8;
+  --red:#c4122f;
+  --blue:#1d5bbf;
+  --l1:#13897d; --l2:#1d5bbf; --l3:#b86e00; --l4:#c4122f;
+  --l1-bg:#e1f3f0; --l2-bg:#e3ecfa; --l3-bg:#fbefdc; --l4-bg:#fbe4e8;
+  --tip-bg:#fff7e0; --tip-ink:#6b4a00;
+  --f-display:"Barlow Condensed","Arial Narrow",system-ui,sans-serif;
+  --f-body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0b1620; --surface:#12212e; --surface-2:#0f1c27; --ink:#e4edf4; --muted:#9db0c0; --line:#24394b;
+  --red:#ff5d72; --blue:#74a6ff;
+  --l1:#4fd1c0; --l2:#74a6ff; --l3:#f2b04a; --l4:#ff7387;
+  --l1-bg:#123430; --l2-bg:#16284a; --l3-bg:#3a2a0f; --l4-bg:#3d1720;
+  --tip-bg:#2e2610; --tip-ink:#f3d58a; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0b1620; --surface:#12212e; --surface-2:#0f1c27; --ink:#e4edf4; --muted:#9db0c0; --line:#24394b;
+  --red:#ff5d72; --blue:#74a6ff;
+  --l1:#4fd1c0; --l2:#74a6ff; --l3:#f2b04a; --l4:#ff7387;
+  --l1-bg:#123430; --l2-bg:#16284a; --l3-bg:#3a2a0f; --l4-bg:#3d1720;
+  --tip-bg:#2e2610; --tip-ink:#f3d58a; color-scheme:dark}
+
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:64px}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:16px;line-height:1.6}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--ink)}
+.wrap{max-width:1120px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+h1,h2,h3,h4{font-family:var(--f-display);line-height:1.05;text-wrap:balance;margin:0;letter-spacing:.005em}
+h2{font-size:clamp(2rem,4.5vw,2.9rem);font-weight:800;text-transform:uppercase}
+h3{font-size:1.55rem;font-weight:700}
+h4{font-size:1.15rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em}
+p{margin:0}
+a{color:var(--blue)}
+:focus-visible{outline:3px solid var(--blue);outline-offset:2px;border-radius:4px}
+.mono{font-family:var(--f-mono);font-size:.78rem;letter-spacing:.06em;text-transform:uppercase}
+
+/* HERO */
+.hero{background:var(--ink);color:#fff;padding-block:40px 36px;position:relative;overflow:hidden}
+:root .hero{--h-ink:#0f2233}
+.hero .wrap{display:grid;grid-template-columns:1.1fr .9fr;gap:32px;align-items:center}
+.hero h1{font-size:clamp(2.6rem,7vw,4.6rem);font-weight:800;text-transform:uppercase;color:#fff}
+.hero h1 span{color:#ff8a9a}
+.hero .lead{margin-top:16px;max-width:52ch;color:#c9d7e3;font-size:1.05rem}
+.hero .meta{margin-top:20px;display:flex;flex-wrap:wrap;gap:8px}
+.hero .meta span{border:1px solid #3a5268;color:#c9d7e3;padding:4px 10px;border-radius:999px}
+.rink{width:100%;max-width:440px;justify-self:end}
+@media (max-width:760px){.hero .wrap{grid-template-columns:1fr}.rink{justify-self:start;max-width:340px}}
+
+/* NAV */
+nav.toc{position:sticky;top:env(safe-area-inset-top,0px);z-index:9;background:var(--surface);border-bottom:1px solid var(--line)}
+nav.toc .wrap{display:flex;gap:4px;overflow-x:auto;scrollbar-width:none;padding-block:8px}
+nav.toc .wrap::-webkit-scrollbar{display:none}
+nav.toc a{flex:none;text-decoration:none;color:var(--ink);font-family:var(--f-display);font-weight:700;font-size:1.05rem;text-transform:uppercase;letter-spacing:.03em;padding:6px 12px;border-radius:6px}
+nav.toc a:hover{background:var(--surface-2);color:var(--blue)}
+
+/* SECTIONS — čáry jako na kluzišti */
+section{padding-block:56px 8px}
+.sec-head{display:grid;grid-template-columns:auto 1fr;gap:6px 18px;align-items:end;margin-bottom:28px}
+.sec-head .line{grid-column:1/-1;height:6px;border-radius:3px;background:var(--blue)}
+.sec-head.red .line{background:var(--red)}
+.sec-head .num{font-family:var(--f-display);font-weight:800;font-size:3.4rem;line-height:.8;color:var(--blue)}
+.sec-head.red .num{color:var(--red)}
+.sec-head p{grid-column:1/-1;color:var(--muted);max-width:68ch;margin-top:6px}
+
+.grid-2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+.grid-3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
+@media (max-width:900px){.grid-3{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:640px){.grid-2,.grid-3{grid-template-columns:1fr}}
+
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:20px}
+.panel h3{margin-bottom:10px}
+ul.clean{margin:0;padding-left:1.1em}
+ul.clean li{margin:4px 0}
+ul.clean li::marker{color:var(--blue)}
+
+/* Zásady */
+.rules{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0;border-top:1px solid var(--line)}
+.rules div{padding:14px 16px 14px 0;border-bottom:1px solid var(--line);display:grid;grid-template-columns:34px 1fr;gap:10px}
+.rules b{font-family:var(--f-display);font-size:1.4rem;color:var(--red);line-height:1.1}
+@media (max-width:640px){.rules{grid-template-columns:1fr}}
+
+.callout{background:var(--tip-bg);color:var(--tip-ink);border-radius:10px;padding:16px 18px;margin-top:16px}
+.callout strong{font-family:var(--f-display);text-transform:uppercase;letter-spacing:.04em;font-size:1.05rem}
+
+/* Stavba lekce — časová osa */
+.timeline{display:flex;border-radius:10px;overflow:hidden;border:1px solid var(--line);margin-bottom:16px}
+.timeline div{padding:12px 14px;color:#fff;min-width:0}
+.timeline div b{display:block;font-family:var(--f-display);font-size:1.25rem;text-transform:uppercase}
+.timeline div span{font-family:var(--f-mono);font-size:.75rem;opacity:.9}
+.t1{background:var(--l1);flex:10}.t2{background:var(--l2);flex:30}.t3{background:var(--l3);flex:10}.t4{background:var(--red);flex:10}
+:root .timeline div{color:#fff}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .timeline div{color:#08131c}}
+:root[data-theme="dark"] .timeline div{color:#08131c}
+@media (max-width:640px){.timeline{flex-direction:column}}
+
+/* Stupně */
+.levels{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:28px}
+.lv{border-radius:10px;padding:12px 14px;border:1px solid var(--line);background:var(--surface)}
+.lv b{font-family:var(--f-display);font-size:1.2rem;text-transform:uppercase;display:block}
+.lv small{color:var(--muted);font-size:.85rem;line-height:1.4;display:block}
+.lv.s1{border-top:5px solid var(--l1)}.lv.s1 b{color:var(--l1)}
+.lv.s2{border-top:5px solid var(--l2)}.lv.s2 b{color:var(--l2)}
+.lv.s3{border-top:5px solid var(--l3)}.lv.s3 b{color:var(--l3)}
+.lv.s4{border-top:5px solid var(--l4)}.lv.s4 b{color:var(--l4)}
+@media (max-width:760px){.levels{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+.chip{display:inline-flex;align-items:center;gap:4px;font-family:var(--f-mono);font-size:.7rem;letter-spacing:.05em;text-transform:uppercase;padding:3px 8px;border-radius:999px;white-space:nowrap}
+.chip.s1{background:var(--l1-bg);color:var(--l1)}.chip.s2{background:var(--l2-bg);color:var(--l2)}
+.chip.s3{background:var(--l3-bg);color:var(--l3)}.chip.s4{background:var(--l4-bg);color:var(--l4)}
+.chip.plain{background:var(--surface-2);color:var(--muted);border:1px solid var(--line)}
+.chip.new{background:transparent;color:var(--blue);border:1px dashed var(--blue)}
+
+/* Metodická řada */
+.steps{display:flex;flex-direction:column;gap:18px}
+.step{background:var(--surface);border:1px solid var(--line);border-radius:12px;display:grid;grid-template-columns:86px minmax(0,1fr);overflow:hidden}
+.step .rail{display:flex;flex-direction:column;align-items:center;padding:18px 0;gap:6px;color:#fff}
+.step .rail .n{font-family:var(--f-display);font-weight:800;font-size:2.6rem;line-height:1}
+.step .rail .mono{font-size:.62rem;writing-mode:vertical-rl;transform:rotate(180deg);opacity:.95}
+.step.s1 .rail{background:var(--l1)}.step.s2 .rail{background:var(--l2)}.step.s3 .rail{background:var(--l3)}.step.s4 .rail{background:var(--l4)}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .step .rail{color:#08131c}}
+:root[data-theme="dark"] .step .rail{color:#08131c}
+.step .body{padding:20px 22px;display:flex;flex-direction:column;gap:14px;min-width:0}
+.step .top{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:baseline}
+.step .goal{color:var(--muted)}
+.step .cols{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px}
+.step .cols > div{min-width:0}
+.step .cols h4{font-size:.95rem;margin-bottom:6px;color:var(--muted)}
+.step ol{margin:0;padding-left:1.3em}
+.step ol li{margin:3px 0}
+.step ol li::marker{font-family:var(--f-mono);font-size:.8rem;color:var(--muted)}
+.err li::marker{color:var(--red)}
+.cue{display:flex;flex-wrap:wrap;gap:6px}
+.cue span{background:var(--surface-2);border:1px solid var(--line);border-radius:6px;padding:3px 9px;font-style:italic;font-size:.92rem}
+.tech{max-width:75ch}
+.tech b{color:var(--ink)}
+@media (max-width:860px){.step .cols{grid-template-columns:1fr}}
+@media (max-width:520px){.step{grid-template-columns:1fr}.step .rail{flex-direction:row;justify-content:flex-start;padding:10px 18px;gap:12px}.step .rail .mono{writing-mode:horizontal-tb;transform:none}}
+
+/* Filtry */
+.filters{display:flex;flex-wrap:wrap;gap:10px 18px;align-items:center;margin-bottom:18px;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px 14px}
+.filters .grp{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.filters .grp > span{font-family:var(--f-mono);font-size:.7rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-right:2px}
+.fbtn{font:inherit;font-size:.88rem;border:1px solid var(--line);background:var(--surface-2);color:var(--ink);padding:5px 11px;border-radius:999px;cursor:pointer}
+.fbtn[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.search{font:inherit;font-size:.92rem;border:1px solid var(--line);background:var(--surface-2);color:var(--ink);padding:6px 12px;border-radius:8px;min-width:0;flex:1 1 180px}
+.count{font-family:var(--f-mono);font-size:.75rem;color:var(--muted);margin-left:auto}
+
+/* Karty her a cvičení */
+.cards{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+@media (max-width:960px){.cards{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:600px){.cards{grid-template-columns:1fr}}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:16px;display:flex;flex-direction:column;gap:8px;min-width:0}
+.card .cat{font-family:var(--f-mono);font-size:.68rem;letter-spacing:.07em;text-transform:uppercase;color:var(--muted)}
+.card h3{font-size:1.4rem}
+.card p{font-size:.95rem}
+.card .var{font-size:.88rem;color:var(--muted);border-left:3px solid var(--line);padding-left:10px}
+.card .foot{margin-top:auto;display:flex;flex-wrap:wrap;gap:6px;padding-top:6px}
+.card .tools{font-size:.85rem;color:var(--muted)}
+.card .tools b{color:var(--ink);font-weight:600}
+.empty{padding:24px;text-align:center;color:var(--muted);border:1px dashed var(--line);border-radius:10px}
+
+/* Lekce */
+.lesson{background:var(--surface);border:1px solid var(--line);border-radius:12px;overflow:hidden;margin-bottom:18px}
+.lesson > header{padding:16px 20px;border-bottom:1px solid var(--line);display:flex;flex-wrap:wrap;gap:8px 14px;align-items:baseline}
+.lesson > header p{color:var(--muted);font-size:.92rem;flex-basis:100%}
+.ltable{width:100%;border-collapse:collapse;font-size:.95rem}
+.ltable th,.ltable td{text-align:left;vertical-align:top;padding:12px 16px;border-bottom:1px solid var(--line)}
+.ltable th{font-family:var(--f-display);font-size:1.1rem;text-transform:uppercase;width:150px;background:var(--surface-2)}
+.ltable th small{display:block;font-family:var(--f-mono);font-size:.72rem;color:var(--muted);text-transform:none;font-weight:500}
+.ltable tr:last-child th,.ltable tr:last-child td{border-bottom:0}
+.ltable td ul{margin:0;padding-left:1.1em}
+.ltable .how{color:var(--muted);font-size:.9rem}
+.tablebox{overflow-x:auto}
+.stations{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.stations div{background:var(--surface-2);border:1px solid var(--line);border-radius:8px;padding:8px 10px;font-size:.9rem;min-width:0}
+.stations div i{font-style:normal;font-family:var(--f-mono);font-size:.68rem;color:var(--muted);display:block}
+@media (max-width:760px){.stations{grid-template-columns:repeat(2,minmax(0,1fr))}.ltable th{width:110px}}
+
+.inline-band{background:var(--surface);border-block:1px solid var(--line);margin-top:56px}
+.inline-band section{padding-bottom:48px}
+
+footer{padding-block:48px;color:var(--muted);font-size:.9rem}
+footer ul{padding-left:1.1em}
+</style>
+</head>
+<body>
+<header class="hero">
+  <div class="wrap">
+    <div>
+      <div class="mono" style="color:#ff8a9a">SUPERkids · Kroužky · Bruslení</div>
+      <h1 style="margin-top:10px">Příručka<br>instruktora <span>bruslení</span></h1>
+      <p class="lead">Metodické řady od prvního kroku na ledě po překládání, zásobník cvičení na stanoviště a přes 60 her. Vše seřazené podle stupně, aby šlo hodinu poskládat za pár minut.</p>
+      <div class="meta mono"><span>Děti 3–15 let</span><span>Led + inline</span><span>Lekce 60 min</span></div>
+    </div>
+    <svg class="rink" viewBox="0 0 400 200" role="img" aria-label="Plánek kluziště s červenou střední čarou, modrými čarami a vhazovacími kruhy">
+      <rect x="4" y="4" width="392" height="192" rx="70" fill="#e9f2f8" stroke="#9fb6c8" stroke-width="4"/>
+      <line x1="200" y1="6" x2="200" y2="194" stroke="#c4122f" stroke-width="5"/>
+      <line x1="140" y1="6" x2="140" y2="194" stroke="#1d5bbf" stroke-width="6"/>
+      <line x1="260" y1="6" x2="260" y2="194" stroke="#1d5bbf" stroke-width="6"/>
+      <line x1="30" y1="12" x2="30" y2="188" stroke="#c4122f" stroke-width="2"/>
+      <line x1="370" y1="12" x2="370" y2="188" stroke="#c4122f" stroke-width="2"/>
+      <circle cx="200" cy="100" r="30" fill="none" stroke="#1d5bbf" stroke-width="2.5"/>
+      <circle cx="78" cy="58" r="22" fill="none" stroke="#c4122f" stroke-width="2"/>
+      <circle cx="78" cy="142" r="22" fill="none" stroke="#c4122f" stroke-width="2"/>
+      <circle cx="322" cy="58" r="22" fill="none" stroke="#c4122f" stroke-width="2"/>
+      <circle cx="322" cy="142" r="22" fill="none" stroke="#c4122f" stroke-width="2"/>
+      <!-- stanoviště -->
+      <g font-family="IBM Plex Mono, monospace" font-size="13" font-weight="600" text-anchor="middle">
+        <circle cx="78" cy="58" r="11" fill="#13897d"/><text x="78" y="62.5" fill="#fff">1</text>
+        <circle cx="78" cy="142" r="11" fill="#1d5bbf"/><text x="78" y="146.5" fill="#fff">2</text>
+        <circle cx="322" cy="58" r="11" fill="#b86e00"/><text x="322" y="62.5" fill="#fff">3</text>
+        <circle cx="322" cy="142" r="11" fill="#c4122f"/><text x="322" y="146.5" fill="#fff">4</text>
+      </g>
+      <g fill="#f29a2e"><path d="M190 60l5-10 5 10z"/><path d="M205 140l5-10 5 10z"/><path d="M168 96l5-10 5 10z"/><path d="M222 112l5-10 5 10z"/></g>
+    </svg>
+  </div>
+</header>
+
+<nav class="toc" aria-label="Obsah">
+  <div class="wrap">
+    <a href="#zasady">Zásady</a>
+    <a href="#lekce">Stavba lekce</a>
+    <a href="#rady">Metodické řady</a>
+    <a href="#cviceni">Cvičení</a>
+    <a href="#hry">Hry</a>
+    <a href="#programy">Ukázkové lekce</a>
+    <a href="#inline">Inline</a>
+    <a href="#zdroje">Zdroje</a>
+  </div>
+</nav>
+
+<main>
+<!-- 1 ZÁSADY -->
+<section id="zasady" class="wrap">
+  <div class="sec-head red"><span class="num">1</span><h2>Zásady instruktora</h2><div class="line"></div>
+    <p>Dvanáct pravidel, která platí v každé hodině. Pořadí odpovídá tomu, jak dítě postupně získává jistotu: nejdřív rovnováha a bezpečí, pak pohyb, nakonec rychlost.</p></div>
+  <div class="rules">
+    <div><b>01</b><p>Výcvik začínáme <strong>mimo ledovou plochu</strong>: rovnováha, stoj na jedné noze, chůze v bruslích.</p></div>
+    <div><b>02</b><p>Při prvním vstupu na led dáváme <strong>oporu a dopomoc</strong>: mantinel, hrazdička („velryba“), zkušenější bruslař.</p></div>
+    <div><b>03</b><p>Naučíme <strong>základní postoj</strong>. Je v něm bruslař nejstabilnější a padá nejméně.</p></div>
+    <div><b>04</b><p>Naučíme <strong>bezpečně padat</strong> z místa, potom z jízdy, a hlavně <strong>rychle vstávat</strong>.</p></div>
+    <div><b>05</b><p>Nový prvek: <strong>na místě → v jízdě s dopomocí → samostatně</strong>. Nejdřív pomalu, rychlost přidáváme postupně.</p></div>
+    <div><b>06</b><p><strong>Brzdění učíme hned</strong>, jak se dítě začne rozjíždět. Bez zastavení nepouštíme do rychlých her.</p></div>
+    <div><b>07</b><p>Každý prvek cvičíme <strong>na obě strany</strong> a jízdě vzad časem věnujeme stejný prostor jako jízdě vpřed.</p></div>
+    <div><b>08</b><p>Hry a štafety zařazujeme průběžně. <strong>Hru vybíráme podle úrovně</strong> skupiny, ne podle toho, co je nejzábavnější.</p></div>
+    <div><b>09</b><p><strong>Ukazujeme, nemluvíme.</strong> Krátký názorný předvod, jedna pokynová věta, a jedeme.</p></div>
+    <div><b>10</b><p>Dáváme dětem <strong>předvádět</strong> před ostatními: prostor pro pochvalu i pro odhalení chyb.</p></div>
+    <div><b>11</b><p>Při obtížích cvik <strong>zjednodušíme</strong>: kratší vzdálenost, kratší doba, opora, pomalejší tempo.</p></div>
+    <div><b>12</b><p>Na konci hodiny necháme <strong>volné bruslení</strong> a pohyb po ledě podle sebe.</p></div>
+  </div>
+  <div class="grid-2" style="margin-top:20px">
+    <div class="panel">
+      <h3>Atmosféra na ledě</h3>
+      <ul class="clean">
+        <li>Po celou dobu si s dětmi hrajeme. Všechno vysvětlujeme hravě, vtipně a s energií.</li>
+        <li>Chceme, aby se smály. Instruktor se klidně předvádí a dělá legraci.</li>
+        <li>Mluvíme i s rodiči: co dnes děti uměly, na co se zaměřit příště.</li>
+        <li>Když se dítě rozpláče, utěšíme ho a rozveselíme, nenutíme ho pokračovat hned.</li>
+        <li>Chválíme konkrétně: „Super, měl jsi pokrčená kolena!“ místo „Dobrý.“</li>
+      </ul>
+    </div>
+    <div class="panel">
+      <h3>Bezpečnost a výbava</h3>
+      <ul class="clean">
+        <li><strong>Helma</strong> (hokejová nebo cyklistická) pro všechny začátečníky, <strong>rukavice</strong> vždy: na ledě chrání prsty před noži bruslí.</li>
+        <li>Brusle pevně utažené v kotníku, nože nabroušené. Test: za patu se nevejde prst.</li>
+        <li>Oblečení teplé, ale pohyblivé. Žádné šály, které mohou viset.</li>
+        <li>Při pádu na ledě <strong>ruce k tělu, ne pod sebe</strong>, prsty z dosahu bruslí ostatních.</li>
+        <li>Rozestupy mezi dětmi aspoň na délku paží, jezdíme všichni stejným směrem.</li>
+        <li>Standard SUPERkids: <strong>jeden instruktor má na starost nejvýše 6 dětí</strong>, u nejmenších (3–4 roky) ještě méně.</li>
+        <li>Povinná výbava dítěte: brusle v dobrém stavu, helma, rukavice, chrániče na kolena a lokty.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- 2 STAVBA LEKCE -->
+<section id="lekce" class="wrap">
+  <div class="sec-head"><span class="num">2</span><h2>Stavba lekce</h2><div class="line"></div>
+    <p>Osvědčená šedesátiminutovka ŠKOLIČKY: společné rozehřátí, hlavní část na stanovištích, kde se skupiny střídají, a společné hry na závěr. Zbytek času je na nazouvání, přechody a volné bruslení.</p></div>
+  <div class="timeline" role="img" aria-label="Časová osa lekce: rozehřátí 10 minut, stanoviště 30 minut, společné hry 10 minut, volné bruslení 10 minut">
+    <div class="t1"><b>Rozehřátí</b><span>10 min · společně</span></div>
+    <div class="t2"><b>Průpravná část – stanoviště</b><span>30 min · 3–4 stanoviště × 7–8 min</span></div>
+    <div class="t3"><b>Společné hry</b><span>10 min</span></div>
+    <div class="t4"><b>Volně</b><span>~10 min</span></div>
+  </div>
+  <div class="grid-3">
+    <div class="panel">
+      <h3>Rozehřátí · 10 min</h3>
+      <p>Celá skupina společně. Mimo led: přenášení váhy, podřepy, chůze po špičkách a patách. Na ledě u mantinelu: „běhání“ na místě, škrabání ledu a dělání hromádky mezi nohama, podřepy, stoj na jedné noze, nácvik pádu a vstávání. Pokročilejší: ZOO a buřtíky.</p>
+    </div>
+    <div class="panel">
+      <h3>Stanoviště · 30 min</h3>
+      <p>Na každém stanovišti jeden instruktor a jedno cvičení. Skupiny se po signálu posunou o stanoviště dál. Stanoviště skládáme ze <a href="#cviceni">zásobníku cvičení</a> tak, aby pokrylo rovnováhu, pohyb vpřed a jednu hru.</p>
+    </div>
+    <div class="panel">
+      <h3>Společné hry · 10 min</h3>
+      <p>Dvě hry pro všechny: jedna pohybová (honička, Mrazík, Rybičky a rybáři) a jedna týmová (Přehazování balónků, Hadi). Odcházet z ledu chceme se smíchem.</p>
+    </div>
+  </div>
+  <div class="callout"><strong>Rozdělení do skupin podle balónků.</strong> Každé dítě dostane balónek jedné ze 3–4 barev, stejné barvy jdou k sobě. Počty si napočítáme předem. Barvy lze rozdat podle věku nebo výkonnosti, takže se šikovní nebrzdí s úplnými začátečníky a nikdo se necítí „odložený“.</div>
+  <div class="grid-2" style="margin-top:16px">
+    <div class="panel">
+      <h3>Klasická stavba hodiny</h3>
+      <p style="color:var(--muted);margin-bottom:8px">Pro kroužek s jednou skupinou bez stanovišť (vzor: první hodina).</p>
+      <ul class="clean">
+        <li><strong>Úvodní část (5–8 min)</strong> – seznámení s ledem, motivační hra.</li>
+        <li><strong>Průpravná část (5 min)</strong> – rozcvičení formou hry (Kuba řekl, Zrcadlo).</li>
+        <li><strong>Hlavní část (20–25 min)</strong> – jedna až dvě metodické řady, krok za krokem.</li>
+        <li><strong>Závěrečná část (10 min)</strong> – štafeta nebo hra, zklidnění, volné bruslení.</li>
+      </ul>
+    </div>
+    <div class="panel">
+      <h3>Pomůcky do tašky</h3>
+      <ul class="clean">
+        <li>Kužely velké i malé (talířky), 4 barvy</li>
+        <li>Barevné plastové míčky + košík</li>
+        <li>Pěnové „žížaly“ (bazénové nudle)</li>
+        <li>Švihadla, lano, tkaničky na Ocásky</li>
+        <li>Fix na led (čáry k přeskakování), hrací barevné kostky</li>
+        <li>Hrazdičky / „velryby“ pro oporu, obruče, puky a hokejky</li>
+        <li>Píšťalka a reproduktor s hudbou</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- 3 METODICKÉ ŘADY -->
+<section id="rady" class="wrap">
+  <div class="sec-head red"><span class="num">3</span><h2>Metodické řady · lední bruslení</h2><div class="line"></div>
+    <p>Průprava v pořadí, ve kterém ji děti zvládají. Každý krok má popis techniky, postup nácviku, typické chyby a krátké pokyny, které na ledě opravdu fungují. Kroky označené <span class="chip new">rozšíření</span> jsme doplnili z odborné literatury nad rámec původních materiálů.</p></div>
+  <div class="levels">
+    <div class="lv s1"><b>Stupeň 1 · Seznámení</b><small>Mimo led, první kroky, pády a vstávání. Typicky 1.–3. lekce.</small></div>
+    <div class="lv s2"><b>Stupeň 2 · Základy</b><small>Postoj, rovnováha, buřtíky, koloběžka, první brzda.</small></div>
+    <div class="lv s3"><b>Stupeň 3 · Jízda</b><small>Plynulá jízda vpřed, oblouky, přeskoky, jízda vzad.</small></div>
+    <div class="lv s4"><b>Stupeň 4 · Pokročilí</b><small>Smyk, překládání, obraty, zastavení vzad, starty.</small></div>
+  </div>
+  <div class="steps" id="steps"></div>
+</section>
+
+<!-- 4 CVIČENÍ -->
+<section id="cviceni" class="wrap">
+  <div class="sec-head"><span class="num">4</span><h2>Zásobník cvičení na stanoviště</h2><div class="line"></div>
+    <p>Hotová stanoviště z ŠKOLIČKY, propagačních lekcí a dětských dnů. Každé má cíl v rámci metodické řady, takže je snadné poskládat hodinu „rovnováha + jízda + hra“.</p></div>
+  <div class="filters" id="ex-filters"></div>
+  <div class="cards" id="ex-cards"></div>
+</section>
+
+<!-- 5 HRY -->
+<section id="hry" class="wrap">
+  <div class="sec-head red"><span class="num">5</span><h2>Hry, honičky a štafety</h2><div class="line"></div>
+    <p>Filtrujte podle typu hry, stupně a povrchu. Stupeň říká, co musí děti umět, aby byla hra bezpečná: honičky na plné rychlosti až od stupně 3, kdy umějí zastavit.</p></div>
+  <div class="filters" id="game-filters"></div>
+  <div class="cards" id="game-cards"></div>
+</section>
+
+<!-- 6 PROGRAMY -->
+<section id="programy" class="wrap">
+  <div class="sec-head"><span class="num">6</span><h2>Ukázkové lekce</h2><div class="line"></div>
+    <p>Hotové programy k převzetí nebo jako inspirace. Lekce ŠKOLIČKY na sebe navazují, každá posouvá rozehřátí o krok dál.</p></div>
+  <div id="lessons"></div>
+</section>
+
+<!-- 7 INLINE -->
+<div class="inline-band">
+<section id="inline" class="wrap">
+  <div class="sec-head red"><span class="num">7</span><h2>Metodická řada · inline brusle</h2><div class="line"></div>
+    <p>Inline má vlastní specifika: tvrdý povrch, jiné pády, brzdička a postoje V / A / T. Začínáme na trávě nebo koberci, kde brusle neujíždějí, a až potom jdeme na asfalt. Hry z <a href="#hry">kapitoly 5</a> s označením „inline“ nebo „obojí“ fungují i tady.</p></div>
+  <div class="callout" style="margin-bottom:20px"><strong>Říkanka na oblékání:</strong> „Helma, lokty, kolena, brusle, dlaně – máme, můžeme jet!“ Helma jde na hlavu první a sundává se poslední. Chrániče dlaní až po zapnutí bruslí, aby si je děti uměly utáhnout.</div>
+  <div class="steps" id="inline-steps"></div>
+</section>
+</div>
+</main>
+
+<footer id="zdroje" class="wrap">
+  <h3 style="color:var(--ink);margin-bottom:10px">Zdroje</h3>
+  <p>Příručka vychází z interních materiálů SUPERkids: Průprava ledním bruslením, Příručka pro instruktora bruslení, Hry, Inline brusle – průpravná cvičení, ŠKOLIČKA BRUSLENÍ 2024, Propagační lekce a Dětské dny na ledě. Doplněné části (označené „rozšíření“) vycházejí z obecně uznávaných postupů výuky bruslení a z těchto zdrojů:</p>
+  <ul>
+    <li>Šafařík, V., Jauris, P.: <em>Teorie a metodika bruslení</em>. SPN, 1985.</li>
+    <li>FSpS MU – kurz bruslení, doporučená posloupnost výuky (jízda vpřed → zastavení → oblouky a překládání → jízda vzad → zastavení vzad → překládání vzad): <a href="https://www.fsps.muni.cz/sdetmivjmkvpohode/kurzy/brusle/tisk.pdf" target="_blank" rel="noopener">fsps.muni.cz</a></li>
+    <li>Metodika výuky inline bruslení u dětí předškolního věku (UK FTVS): <a href="https://dspace.cuni.cz/handle/20.500.11956/127479" target="_blank" rel="noopener">dspace.cuni.cz</a></li>
+    <li>Diplomová práce ZČU – metodika nácviku jízdy vzad a překládání: <a href="https://otik.zcu.cz/bitstream/11025/48705/1/Turhobr_DP.pdf" target="_blank" rel="noopener">otik.zcu.cz</a></li>
+  </ul>
+</footer>
+
+<script>
+/* ===================== METODICKÉ ŘADY – LED ===================== */
+const STEPS = [
+ {lv:1,name:"Rovnováha mimo led",goal:"Posílit nohy a naučit se stát na jedné noze ještě před nazutím bruslí.",
+  tech:"Před nazutím bruslí seznámíme děti s rovnováhou: stoj na jedné noze, přeskok na druhou nohu a udržení rovnováhy. Bez dostatečně silných dolních končetin rovnováhu na ledě neudrží.",
+  how:["Výdrž na jedné noze (5–10 s, pak vyměnit)","Poskoky na jedné noze – klidně formou štafety dvou družstev","Přeskoky přes švihadlo","Přeskok z nohy na nohu s výdrží v dopadu"],
+  err:["Dítě hned padá na druhou nohu → zkrátit výdrž, dát oporu o zeď","Propnuté koleno stojné nohy"],
+  cue:["Buď čáp!","Udrž to do pěti"],games:["Kuba řekl","Zrcadlo"]},
+ {lv:1,name:"První kroky v bruslích mimo led",goal:"Zvyknout si na nože pod nohama na gumové podlaze (cesta ze šatny, prostor u mantinelu).",
+  tech:"Po nazutí bruslí chodíme mimo ledovou plochu. Krátké krůčky, kolena mírně pokrčená, ruce před tělem.",
+  how:["Chůze vpřed","Přenášení váhy z nohy na nohu na místě","Podřepy","Podřep s výskokem a udržením rovnováhy v dopadu","Výdrž na jedné noze","Chůze po špičkách, po patách","Chůze vzad"],
+  err:["Kotníky se lámou dovnitř → zkontrolovat utažení bruslí","Dlouhé kroky a záklon"],
+  cue:["Malé krůčky jako tučňák","Kolínka měkká"],games:["Výlet do ZOO"]},
+ {lv:1,name:"První kroky na ledě, pády a vstávání",goal:"Seznámit se s kluzkou plochou, ztratit strach z pádu a umět samo vstát.",
+  tech:"Nejdřív kroky s oporou podél mantinelu nebo s hrazdičkou. Po pádu necháme dítě chvíli klouzat po kolenou, ať pozná led. <b>Bezpečný pád:</b> snížit těžiště do dřepu a sednout si šikmo na stranu, ruce k tělu. <b>Vstávání:</b> pád → vzpor klečmo („kočička“) → klek na jedno koleno, ruce na stojné koleno → odtlačit se do stoje.",
+  how:["Ťapkání podél mantinelu s oporou","Malé kroky bez opory, snaha udržet se na nohou","Dotek ledu jednou a oběma rukama","Sbírání předmětů z ledu","Stoj na jedné noze, dotek špiček bruslí","Nízký skipink – přešlapování se zvedáním kolen","Tlesknutí pod kolenem ve stoji na jedné noze","Žabí skok z mírného dřepu s odpružením v kolenou","Nácvik pádu na povel a vstávání (kočička → klek → stoj)"],
+  err:["Dítě se zachytává rukama dozadu → ruce před tělo, pád do strany","Vstává přímo z kolen bez „kočičky“ a znovu padá","Ruce na ledě v cestě bruslím ostatních"],
+  cue:["Kočička – klek – stoj","Spadni jako pytel brambor","Ruce k bříšku"],games:["Kdo se první postaví?","Bomba (Tornádo, bomba, povodeň)","Sochy"]},
+ {lv:2,name:"Základní bruslařský postoj",goal:"Najít stabilní postavení, ze kterého vychází každý další prvek.",
+  tech:"Nohy rovnoběžně na šíři ramen, chodidla míří dopředu. Mírný podřep tak, aby kolmice spuštěná z kolen mířila lehce před špičky. Váha uprostřed chodidel, kotníky zpevněné, hlava vzpřímená, ruce v mírném upažení před tělem.",
+  how:["Ukázka: „nožičky vedle sebe, kolínka před špičkami, koukáme na sebe“","Děti tančí a na „TEĎ!“ zaujmou postoj – opakujeme","Postoj v jízdě: instruktor táhne dítě v postoji","Postoj s rukama na kolenou (vagón ve Vláčku)"],
+  err:["Pohled na brusle → vyhrbená záda","Kolena nejsou před špičkami (propnuté nohy)","Nezpevněné kotníky","Nohy příliš u sebe nebo moc daleko"],
+  cue:["Sedni si na neviditelnou židli","Koukej na mě, ne na brusle","Kolena zakryjí špičky"],games:["Sochy","Strážník","Úkoly na signál"]},
+ {lv:2,name:"Rovnovážná cvičení – ZOO",goal:"Hravě trénovat přenášení váhy, snižování těžiště a stoj na jedné noze.",
+  tech:"Na ledě nebo u mantinelu napodobujeme zvířata. Každé zvíře trénuje jednu dovednost.",
+  how:["Medvěd – mírný stoj rozkročný, upažit, přenášet váhu z nohy na nohu","Čáp – zvedání kolen, plácnutí na koleno a pod zvednutou nohou","Krab – ruce klapou, krůčky stranou","Tučňák – chůze v mírném předklonu, špičky od sebe","Opice – hluboký dřep, posun vpřed pomocí rukou","Žába – stoj spatný, výskoky","Jízda v podřepu, sbírání předmětů, podjíždění překážek"],
+  err:["Zvířata se dělají jen nahoře rukama, nohy stojí → hlídat práci kolen"],
+  cue:["Kdo je nejlepší medvěd?","Čáp vydrží na jedné noze do tří"],games:["Výlet do ZOO","Škatulata","Limbo"]},
+ {lv:2,name:"Jízda vpřed dvouoporová – buřtíky",goal:"První aktivní pohyb vpřed s váhou na obou nohách.",
+  tech:"<b>Nesouběžné vlnky vpřed („rybičky“, „buřtíky“).</b> Ze základního postoje vytočíme špičky od sebe a tlačením kolen k sobě překlopíme brusle na vnitřní hrany. Snížíme těžiště a zatlačíme chodidla do ledu. Když se brusle rozjedou na víc než šíři ramen, otočíme špičky k sobě, narovnáváme kolena a brusle stáhneme zpět. Pak srovnáme špičky a necháme jet do zastavení.",
+  how:["Na místě bez skluzu, s oporou mantinelu","Jeden buřtík a dojet do zastavení","Buřtík s větším odrazem a rozsahem","Navazování více buřtíků za sebou (kužel jako cíl)","Slalom pomocí buřtíků („Zamražené nožičky“)"],
+  err:["Nedostatečné snížení těžiště","Špatná práce v kolenou – nohy rovné","Brusle nejsou na vnitřní hraně","Malý odraz","Nezpevněný kotník"],
+  cue:["Špičky ven – kolínka k sobě – zatlač","Nakresli citron","Nohy přimražené k ledu"],games:["Nezvedej nohy","Kdo nejdál"]},
+ {lv:2,name:"Jízda vpřed jednooporová – koloběžka",goal:"Naučit se odraz z vnitřní hrany a skluz po jedné noze.",
+  tech:"Ze základního postoje vytočíme jednu brusli kolmo na druhou (postavení T). Odrážíme se z <b>vnitřní hrany</b> vytočené brusle a v okamžiku odrazu přeneseme váhu na skluzovou nohu. Odrazovou nohu vedeme nízko nad ledem zpět ke skluzové a jedeme po jedné noze. Pro správnou techniku odrazy střídáme: přisunout, položit do základního postoje, odrazit druhou nohou.",
+  how:["Jeden odraz a skluz po obou nohách do zastavení","Opakované odrazy jednou nohou (koloběžka) – pak vyměnit","Střídavý odraz pravá/levá = základ plynulé jízdy","Skluz po jedné noze co nejdéle (Kdo nejdál)"],
+  err:["Příliš napnutá skluzová noha","Přisouvání odrazové nohy po ledě","Váha zůstává na odrazové noze","Odraz ze špičky (píchání), ne z hrany"],
+  cue:["Jedna noha přimražená, druhá odstrkuje","Odstrč a nech jet","Tlač celou čepelí, ne špičkou"],games:["Koloběžka (stanoviště)","Kdo nejdál","Vystřelování raket"]},
+ {lv:2,name:"Zastavení přívratem (pluh)",goal:"Umět bezpečně zastavit z pomalé jízdy – podmínka pro rychlejší hry.",
+  tech:"<b>Jednostranný přívrat:</b> z jízdy v základním postoji přeneseme váhu na levou nohu, pravou špičku vytočíme dovnitř asi o 45° a vnitřní hranou jemně „seřezáváme“ led. Čím větší tlak, tím rychlejší zastavení – zpočátku brzdíme dlouze a jemně, jinak se brusle zařízne a dítě přepadne. <b>Oboustranný přívrat:</b> obě špičky dovnitř (tvar písmene A), brusle svírají asi 90°, kolena pokrčená.",
+  how:["U mantinelu na místě vytáčet brusli a „seřezávat“ led (dělat sníh)","Zastavení z pomalé jízdy kdekoli","Zastavení na určeném místě (čára, kužel)","Zastavení na zvukový signál"],
+  err:["Příliš velký předklon","Moc velká síla brzdící nohy – brusle se zasekne","Nepokrčená kolena","Slabé překlopení na vnitřní hranu"],
+  cue:["Udělej sníh!","Pizza","Jemně, jako když mažeš máslo"],games:["Strážník","Červená – zelená","Udělej pózu"]},
+ {lv:3,name:"Přeskakování překážek",goal:"Obratnost, odraz a odpružený dopad.",
+  tech:"<b>Snožmo:</b> z jízdy v základním postoji snížit těžiště, ruce do zapažení, švihem paží a rychlým narovnáním nohou mírný výskok, dopad tlumit pokrčením kolen. <b>Jednonož:</b> odraz z jedné nohy, druhá koleno vzhůru, dopad na odrazovou nohu (pokročilí i na druhou nebo obě).",
+  how:["Výskok na místě s oporou","Výskok v jízdě ve dvojici pro jistotu v dopadu","Přeskok čar na ledě (fixou namalované)","Přeskok hokejky, puku, pěnové žížaly"],
+  err:["Málo snížené těžiště","Slabý odraz","Doskok do natažených nohou","Špatné odpružení v kolenou"],
+  cue:["Pružinka!","Dopadni potichu"],games:["Žabky","Opičí dráha"]},
+ {lv:3,name:"Oblouky a zatáčení vpřed",goal:"Řídit směr jízdy náklonem a přenesením váhy.",new:true,
+  tech:"Jízda po oblouku na obou bruslích: vnitřní brusle (blíž ke středu oblouku) mírně vpředu, obě brusle nakloněné do oblouku – vnitřní na vnější hraně, vnější na vnitřní. Ramena a pohled vedou do oblouku, váha víc na vnější noze, kolena pokrčená.",
+  how:["Obkroužit kužel na obou bruslích oběma směry","Velký kruh kolem vhazovacího kruhu se skluzem","Na kruhu odrážet jen vnější nohou (půlbuřtíky na kruhu)","Slalom mezi kužely se širokými rozestupy, postupně užší","Osmička kolem dvou kuželů"],
+  err:["Zatáčí jen rameny, nohy jedou rovně","Vzpřímený postoj → brusle nedrží hranu","Trénuje se jen oblíbený směr"],
+  cue:["Koukej, kam chceš jet","Nakloň se jako motorka","Oběma směry stejně"],games:["Živý slalom","Stíhaná","Vzájemné objíždění"]},
+ {lv:3,name:"Jízda vzad",goal:"Rozjet se a plynule jet vzad, umět se ohlížet.",new:true,
+  tech:"Postoj vzad: kolena výrazně pokrčená, váha nad <b>přední částí nožů</b> (ne na patách!), záda rovná, ruce před tělem. <b>Buřtíky vzad („přesýpací hodiny“):</b> špičky k sobě, paty tlačíme od sebe, brusle se rozjedou do šíře, pak paty stáhneme zpět k sobě. <b>Půlbuřtíky vzad (písmeno C):</b> jedna noha jede rovně, druhá vnitřní hranou kreslí půlkruh, střídáme nohy. Pohled přes rameno do směru jízdy.",
+  how:["U mantinelu: odtlačit se rukama a jet vzad v postoji","Kamarád pomocník: jeden jede vpřed a tlačí druhého za ruce","Chůze „kačenka“ vzad z postavení A","Jeden buřtík vzad, pak více za sebou","„Dva dopředu, jeden dozadu“","Půlbuřtíky vzad, střídavě pravá/levá","Jízda vzad s ohlížením přes rameno na kužel"],
+  err:["Váha na patách → pád vzad","Natažená kolena","Velký předklon (zadek vystrčený)","Neohlíží se – srážky"],
+  cue:["Nos nad koleny","Přesýpací hodiny","Kreslíme céčka","Podívej se přes rameno"],games:["Stíny","Strážník","Vzájemné objíždění"]},
+ {lv:4,name:"Zastavení smykem (hokejka)",goal:"Nejefektivnější zastavení z rychlé jízdy.",
+  tech:"Z jízdy vpřed se mírně nadlehčíme v kolenou a obě brusle rychle vytočíme kolmo na směr jízdy. V nadlehčení přetočíme boky, pak pokrčíme kolena a brusle překlopíme: přední brusle „brousí“ led vnitřní hranou, zadní vnější. Ramena zůstávají čelem po směru, celý pohyb končí v základním postoji kolmo k výchozímu směru.",
+  how:["Na místě: poskok s přetočením bruslí o 90°","U mantinelu přetáčet brusle a dělat sníh","Postupný přechod z jednostranného přívratu do smyku","Smyk z pomalé jízdy na signál, oběma směry"],
+  err:["Velký předklon a pád dopředu","Chybí nadlehčení při vytočení","Váha na patách","Točí se celým tělem, ramena jdou s nohama"],
+  cue:["Odlehči – otoč – zatlač","Udělej sněhovou spršku"],games:["Rychlý úsek","Udělej pózu","Strážník"]},
+ {lv:4,name:"Překládání vpřed",goal:"Plynulá jízda v oblouku a zrychlení v zatáčce.",new:true,
+  tech:"Na kruhu: vnější noha se <b>překládá přes vnitřní</b> a pokládá na led těsně před ni, vnitřní noha se odráží pod tělem z vnější hrany („podšlap“). Kolena stále pokrčená, ramena a pohled do kruhu, vnitřní ruka mírně vzad.",
+  how:["Chůze překládáním bokem podél čáry na místě (bez skluzu)","Překládání s oporou mantinelu bokem","Pomalé překládání na velkém kruhu – „překroč kužel“","Kruh doleva i doprava, pak osmička","Překládání se zrychlením v rohu kluziště"],
+  err:["Vnější noha se nepřekládá, jen přisouvá","Propnutá kolena","Pohled dolů na brusle","Cvičí se jen jedna strana"],
+  cue:["Překroč a odstrč","Pod sebe – přes sebe","Hlava do kruhu"],games:["Stíhaná","Rychlé kolo"]},
+ {lv:4,name:"Obraty vpřed ↔ vzad",goal:"Plynule změnit směr jízdy bez zastavení.",new:true,
+  tech:"Obrat po obou bruslích: v pomalé jízdě vpřed mírné nadlehčení, natočení ramen a boků do směru obratu a přetočení obou bruslí o 180°. Dopad do postoje vzad (kolena pokrčená, váha vpředu). Obrat vzad → vpřed stejně, s pohledem přes rameno.",
+  how:["Na místě: poskok s otočkou o 1/2","U mantinelu přetáčení bez poskoku (po špičkách)","Obrat z pomalé jízdy kolem kuželu","Obrat na signál (Strážník)","Navázat obrat a pokračovat buřtíky vzad"],
+  err:["Otočí se jen nohy, ramena zůstávají","Dopad na paty","Moc velká rychlost na začátku"],
+  cue:["Nejdřív ramena, pak nohy","Otoč se a posaď"],games:["Strážník","Úkoly na signál","Stíny"]},
+ {lv:4,name:"Zastavení z jízdy vzad",goal:"Bezpečně zastavit při jízdě pozpátku.",new:true,
+  tech:"<b>Pluh vzad:</b> z jízdy vzad v pokrčeném postoji tlačíme paty od sebe a špičky k sobě, brusle na vnitřních hranách „seřezávají“ led. Váha zůstává nad přední částí nožů. Varianta pro jednu nohu: váha na jedné noze, druhá paty ven a brzdí.",
+  how:["U mantinelu na místě tlačit paty ven a dělat sníh","Z pomalé jízdy vzad – jeden buřtík vzad a pluh","Zastavení vzad na čáře","Zastavení vzad na signál"],
+  err:["Váha na patách → pád vzad","Natažená kolena","Paty se tlačí málo, brusle jen kloužou"],
+  cue:["Paty ven – udělej sníh","Nos nad koleny"],games:["Strážník","Červená – zelená"]},
+ {lv:4,name:"Starty a rychlost",goal:"Rychlý rozjezd z místa – hokejová a rychlostní průprava.",new:true,
+  tech:"<b>T-start:</b> brusle do postavení T, zadní noha se odrazí celou vnitřní hranou, tělo v předklonu. <b>Čelní start (V):</b> špičky od sebe, 3–4 krátké rychlé kroky „po špičkách“ (běh), pak prodlužovat do plného odrazu a skluzu.",
+  how:["Krátké rychlé kroky na místě („hořící led“)","Start na signál – 5 metrů","Start z T-postavení na obě strany","Start a zastavení smykem u čáry"],
+  err:["Hned dlouhé kroky – nerozjede se","Vzpřímené tělo","Odraz špičkou místo hranou"],
+  cue:["Malé rychlé – pak velké","Led pálí!"],games:["Rychlý úsek","Rychlé kolo","Štafety"]}
+];
+
+/* ===================== INLINE ===================== */
+const INLINE = [
+ {lv:1,name:"Terén a první postavení na brusle",goal:"Bezpečný začátek bez strachu z ujíždějících koleček.",
+  tech:"Vybereme méně frekventovanou asfaltovou plochu, vedle které je tráva. Na trávě brusle neujíždějí, děti můžou chodit a hrát si a zvykají si na „kolečka na nohách“.",
+  how:["Oblékání podle říkanky, kontrola utažení","Chůze a hry na trávě","Postoje na trávě, pak na asfaltu"],err:["Začátek rovnou na hladkém asfaltu a ze svahu"],cue:["Helma první, helma poslední"],games:["Semafor"]},
+ {lv:1,name:"Postoje V, A, T a hrany",goal:"Umět bezpečně stát a nedat se brusli odjet.",
+  tech:"<b>Základní postoj:</b> nohy na šíři ramen, mírně pokrčená kolena, zpevněné kotníky, vzpřímená hlava, těžiště mírně vpřed. Nejčastější chyba je propnutí kolen. <b>V:</b> paty k sobě, špičky od sebe – brusle nejedou vzad (zastavení v mírném kopci). <b>A:</b> špičky k sobě, paty od sebe – stání z kopce. <b>T:</b> zadní brusle kolmo za patou přední – pohodlné stání, u pokročilých i brzda. <b>Hrany:</b> vnitřní (X), střední (II), vnější (O).",
+  how:["Postoje nejdřív na trávě, pak na asfaltu","Nůžkový postoj – střídavě předsunout jednu brusli","Střídání A a V postoje","Na lyžaře – náklony na hrany na povel instruktora"],err:["Propnutá kolena","Váha na patách"],cue:["Paty k sobě – špičky od sebe"],games:["Semafor","Na lyžaře"]},
+ {lv:1,name:"Pády a vstávání",goal:"Padat dopředu na chrániče a umět vstát.",
+  tech:"<b>Pád vpřed:</b> nejdřív kolena, pak chrániče předloktí, nakonec lokty. Dlaně otevřené. <b>Pád vzad:</b> snížit těžiště do dřepu, ruce nahoru nebo na hrudník, padat do „kolébky“ – nikdy ruce pod sebe. <b>Vstávání:</b> kočička (vzpor klečmo) → klek na jedno koleno → ruce na koleno stojné nohy → vzepřít se, nohy v postoji V.",
+  how:["Pády na trávě, potom na asfaltu","Na vlně – instruktor řekne „zepředu“ / „zezadu“","Vstávání na čas"],err:["Ruce pod sebe – riziko zlomeniny zápěstí"],cue:["Kolena – předloktí – lokty"],games:["Na vlně","Komáří repelent"]},
+ {lv:2,name:"Rovnovážná cvičení",goal:"Těžiště, stoj na jedné noze, odpružení.",
+  tech:"Stejné jako na ledě, jen na tvrdém povrchu. ZOO: vysoká kolena, čapí chůze s tlesknutím pod kolenem, medvědí chůze, opičák (široký stoj, ruce mezi bruslemi).",
+  how:["Dřep, dřep s výskokem, poskoky na místě","Skákání panáka","Jízda se střídavě sníženým a zvýšeným těžištěm","Sbírání předmětů ze země"],err:["Rovné nohy při dopadu"],cue:["Pružinka"],games:["Kdo dojede nejdál ve dřepu?"]},
+ {lv:2,name:"Jízda vpřed",goal:"Z chůze kačenkou do plynulé jízdy.",
+  tech:"Vychází z V postoje: kolena pokrčená a zakrývají špičky, ruce před tělem, nepředkláníme se. Váhu přenášíme dopředu, aby případný pád šel na chrániče. Kačenka = chůze z brusle na brusli, při položení lehce dupneme a brusle se rozjede. Pak koloběžka (z T postoje), buřtíky (z V do A) a půlbuřtík.",
+  how:["Kačenka","Nákupní vozík – jeden tlačí druhého","Koloběžka, střídat nohy","Buřtíky – jeden, pak více za sebou","Půlbuřtík","Jízda ve dvojici „levá, pravá“","Brána – projet v podřepu"],err:["Koloběžka do strany, noha padá na hranu","Záklon"],cue:["Dupni a jeď"],games:["Vláček","Balónky","Honička v týmu"]},
+ {lv:3,name:"Zatáčení",goal:"Změna směru přenesením váhy.",
+  tech:"Na tu stranu, kam zatáčíš, jsou nakloněné obě brusle a víc zatížíš nohu na té straně. <b>Letadélko:</b> širší postoj, ruka ke kolenu na straně zatáčení, úklon. <b>Pistolník:</b> spojené ruce před sebou ukazují směr, točí se celý trup.",
+  how:["Přenášení váhy na trávě","Letadélko kolem půlkruhu z kuželů","Pistolník s rychlejší jízdou","Slalom"],err:["Točí jen ruce, ne trup","Plete si strany"],cue:["Ruka ke kolenu"],games:["Komisař","Lovci"]},
+ {lv:3,name:"Brzdění",goal:"Spolehlivě zastavit – podmínka jízdy mimo hřiště.",
+  tech:"<b>Brzdička:</b> brusli se špalkem předsunout na úroveň prvního kolečka stojné nohy, zvednout špičku (3 ze 4 koleček ve vzduchu), oběma rukama tlačit do kolena brzdící nohy. Hlídat opotřebení špalku. <b>Pluh:</b> široký stoj, kolena a kotníky dovnitř, těžiště vzad – jen pro malé rychlosti, nikdy nespojit do A. <b>Nouzové:</b> wall stop (ruce před sebou, hlava stranou), vběhnutí či vjetí do trávy.",
+  how:["Střídavé předsouvání bruslí","Brzdička na trávě","Zabrzdit před půlkruhem z kuželů","Brzdička z rychlejší jízdy"],err:["Brzdící brusle se nepředsune","Málo váhy na brzdě","Jede při brzdění do strany"],cue:["Předsuň – zvedni špičku – tlač do kolena"],games:["Komisař"]},
+ {lv:3,name:"Jízda vzad",goal:"První pohyb pozpátku.",
+  tech:"Kačenka vzad z A postoje, buřtíky vzad (z A téměř do V a zpět), půlbuřtíky střídavě. Doporučit dřep a nebát se pustit nohy od sebe.",
+  how:["Kačenka vzad","Kamarád pomocník","Dva dopředu, jeden dozadu","Z áčka do véčka","Buřtíky vzad, půlbuřtíky L/P"],err:["Váha na patách","Rovná kolena"],cue:["Sedni si"],games:["Stíny"]},
+ {lv:4,name:"Překážky a složitější prvky",goal:"Obrubník, schody, slalom, dráha.",
+  tech:"<b>Obrubník bokem:</b> paralelní postavení, nejdřív vnitřní noha (blíž k obrubníku), pak dokročit. <b>Čelně:</b> V postoj, špičky u obrubníku, jedna noha, druhá. <b>Schody nahoru</b> čelně ve V, <b>dolů</b> pozpátku (pád jde dopředu na chrániče). Zábradlí jen jako pojistka.",
+  how:["Slalom kuželů (1 m) – jednou nohou, oběma","Dráha: přeskok, podjetí brány, zatáčka","Pavouk – obě nohy za sebou patami k sobě","Jízda po předním a zadním kolečku"],err:["Opírání o zábradlí celou vahou"],cue:["Vnitřní noha první"],games:["Inline hokej","Inline fotbal"]}
+];
+
+/* ===================== CVIČENÍ ===================== */
+const EX = [
+ {n:"Jednoduchý slalom",lv:1,f:"Pohyb + obratnost",d:"Zábavný slalom s úkoly: na značce kleknout a vstát, na značce otočka o 360°, na značce přelézt žížalu.",t:"kužely, žížala",s:"ŠKOLIČKA"},
+ {n:"Sochy",lv:1,f:"Postoj, zastavení",d:"Děti jezdí od mantinelu k mantinelu. Na slovo SOCHY se zastaví a udělají sochu, kterou předvede instruktor – vtipnou, klidně se zvukem.",t:"malé kužely, míčky",s:"ŠKOLIČKA"},
+ {n:"Sbírání jablek",lv:1,f:"Snížení těžiště",d:"Míčky leží na ledě. Děti si opatrně kleknou, seberou míček a hodí ho do košíčku.",t:"barevné míčky, košík",s:"ŠKOLIČKA"},
+ {n:"Maminka říká…",lv:1,f:"Rovnováha, pozornost",d:"Děti stojí v kroužku. „Maminka říká: dotkni se špiček bruslí / kolínek / zadečku / ledu; udělej dřep; otoč se dokola; zvedni nožičku; klepej rychle nožičkama o led.“",t:"—",s:"ŠKOLIČKA"},
+ {n:"Základní postoj na TEĎ",lv:2,f:"Základní postoj",d:"Ukážeme postoj: nožičky vedle sebe, chodidla dopředu na šíři ramen, mírný podřep, kolínka před špičkami, hlava vzhůru. Děti tančí a na „TEĎ!“ zaujmou postoj. Opakujeme.",t:"hudba",s:"ŠKOLIČKA"},
+ {n:"Slalom se žížalou",lv:1,f:"Chůze po ledě",d:"Lehký slalom, kterým děti ťapkají. Na ledě leží žížala, kterou mají při chůzi mezi nohama. Cíl dáme ke startu, ať dráhu jedou víckrát.",t:"kužely, žížaly",s:"ŠKOLIČKA"},
+ {n:"Had co se plazí korunami stromů",lv:1,f:"Chůze, podlézání",d:"Lano leží esovitě na ledě, děti ho mají mezi nohama a jedou podle něj. Instruktor chodí s lyžařskou hůlkou („větví“), kterou musí podlézt.",t:"lano, lyžařská hůlka",s:"Propagační lekce"},
+ {n:"Výlet do ZOO",lv:1,f:"Rovnováha",d:"Medvěd (kolébání), Rak (pozpátku na zemi), Čáp (plácání na koleno a pod nohou), Krab (klapání, krůčky stranou), Tučňák (ťapkání), Had (plazení po ledě), Opice, Žába.",t:"—",s:"Propagační lekce"},
+ {n:"Žabky",lv:2,f:"Odraz, dopad",d:"Poskoky přes čáry namalované fixou na led. Nejdřív na místě, pak v pomalé jízdě.",t:"fix na led",s:"ŠKOLIČKA"},
+ {n:"Buřtík ke kuželu",lv:2,f:"Jízda vpřed – buřtíky",d:"Kužel před nožičkama. Vytočíme špičky, tlačíme kolínka k sobě, zatlačíme do ledu – a dojedeme ke kuželu.",t:"kužely",s:"ŠKOLIČKA"},
+ {n:"Zamražené nožičky",lv:2,f:"Buřtíky",d:"Jednoduchý slalom, který se smí jet jen pomocí buřtíků – nožičky nesmí odejít od ledu.",t:"kužílky, pěnová žížala",s:"ŠKOLIČKA"},
+ {n:"Vláček",lv:2,f:"Postoj v jízdě",d:"Dvojice: lokomotiva tlačí vagón ke kuželu a zpět. Vagón je v základním postoji s rukama na kolenou. Pak výměna.",t:"kužel",s:"ŠKOLIČKA"},
+ {n:"Kostky",lv:2,f:"Jízda, orientace",d:"Dítě hodí barevnou kostkou a podle padlé barvy dojede na stanoviště vyměnit míček stejné barvy. Připravit míčky na start i na stanoviště.",t:"barevné kostky, míčky",s:"ŠKOLIČKA"},
+ {n:"Zrcadlo",lv:1,f:"Rovnováha, pozornost",d:"Děti dělají přesně to, co instruktor: rychlé zvedání nožiček, dotek špiček, kleknutí, poskoky.",t:"—",s:"ŠKOLIČKA"},
+ {n:"Koloběžka",lv:2,f:"Jednooporová jízda",d:"Jedna nožička přimražená k ledu, druhá se kolmo odráží jako na koloběžce. Nejdřív jeden odraz (měníme nohy), pak opakované odrazy.",t:"—",s:"ŠKOLIČKA"},
+ {n:"Limbo",lv:2,f:"Snížení těžiště v jízdě",d:"Děti podjíždějí pod pěnovou žížalou, kterou dva držitelé posouvají níž a níž.",t:"pěnová žížala",s:"ŠKOLIČKA"},
+ {n:"Bořiči a stavitelé",lv:2,f:"Pohyb po ploše, shýbání",d:"Velké kužely na ledě. Jeden tým kužely staví, druhý je shazuje. Po čase se týmy prohodí a spočítá se, kolik stojí.",t:"velké kužely",s:"ŠKOLIČKA"},
+ {n:"Klouzačka",lv:2,f:"Skluz",d:"Pár krůčků, nabrat malou rychlost, přestat se odrážet a jen klouzat v základním postoji.",t:"—",s:"ŠKOLIČKA"},
+ {n:"Opičí dráha",lv:2,f:"Kombinace dovedností",d:"Libovolně sestavená dráha: slalom, podlézání žížaly, přeskok čáry, sebrání míčku, zastavení u kuželu.",t:"cokoli z tašky",s:"Propagační lekce"},
+ {n:"Sázení rajčat",lv:2,f:"Jízda, shýbání",d:"Dva týmy, každý má svou barvu kuželů. Nejdřív na kužely pokládají míčky, potom je sbírají zpět.",t:"kužely 2 barev, míčky",s:"Propagační lekce"},
+ {n:"Kdo se první postaví?",lv:1,f:"Vstávání",d:"Všichni leží nebo klečí na ledě. Na signál vstávají bez opory (kočička → klek → stoj). Instruktor předem ukáže správný postup.",t:"—",s:"První hodina"},
+ {n:"Čápi",lv:1,f:"Zvedání nohou",d:"Stoj upažmo, střídavé zvedání kolen, plácnutí pod kolenem. Postupně v pomalé chůzi.",t:"—",s:"První hodina"},
+ {n:"Kolem kuželu",lv:3,f:"Oblouky",d:"Kužel uprostřed kruhu. Děti ho objíždějí na obou bruslích, pak s odrazem vnější nohou. Na signál změna směru.",t:"kužel",s:"rozšíření",new:true},
+ {n:"Překroč kužel",lv:4,f:"Překládání",d:"Na kruhu z malých talířků děti vnější nohou „překračují“ každý talířek. Nejdřív v chůzi, pak v pomalé jízdě. Oba směry.",t:"talířové kužely",s:"rozšíření",new:true},
+ {n:"Přesýpací hodiny",lv:3,f:"Jízda vzad",d:"Buřtíky vzad podél čáry: špičky k sobě, paty ven, stáhnout. Kdo nakreslí víc hodin do kuželu?",t:"kužely",s:"rozšíření",new:true},
+ {n:"Sněhová sprcha",lv:2,f:"Zastavení",d:"U mantinelu „škrabeme“ led vnitřní hranou a děláme hromádku sněhu. Pak z pomalé jízdy zastavit tak, aby vznikl sníh. Kdo má největší hromádku?",t:"—",s:"rozšíření",new:true}
+];
+
+/* ===================== HRY ===================== */
+const G = [
+ // HONIČKY
+ {n:"Jednoduchá honička",c:"Honičky",lv:3,sf:"obojí",d:"Ve vymezeném prostoru jeden nebo více pronásledovatelů. Měníme způsob předání „baby“ i způsob pohybu: vpřed, vzad, vlnovkou, odrazy jedné nohy.",s:"Hry"},
+ {n:"Honička dvojic a trojic",c:"Honičky",lv:3,sf:"obojí",d:"Honí se dvojice nebo trojice držící se za ruce. Určíme, kdo z nich smí předat babu a jak se drží.",s:"Hry"},
+ {n:"Každý každého",c:"Honičky",lv:3,sf:"obojí",d:"Každý honí každého, každý si sám počítá chycené. Vyhrává, kdo se v určeném čase dotkne nejvíce hráčů.",s:"Hry"},
+ {n:"Mrazík",c:"Honičky",lv:2,sf:"obojí",d:"Mrazík zmrazuje dotykem (nebo pěnovou žížalou), Slunce rozmrazuje dotykem nebo objetím kolem. Zmražený stojí s rukou nahoře nebo klečí na kolínku. Instruktor hru náhle ukončí a podle počtu zmražených určí vítěze.",v:"Pro nejmenší: zmražený klečí, rozmrazí ho plácnutí rukou kohokoli.",s:"Hry · ŠKOLIČKA"},
+ {n:"Přízemní honička",c:"Honičky",lv:3,sf:"led",d:"Jako jednoduchá honička, ale všichni tlačí před sebou metu (kužel, puk, míček).",s:"Hry"},
+ {n:"Ovečky, ovečky",c:"Honičky",lv:2,sf:"obojí",d:"Vlk stojí uprostřed, ovečky přejíždějí z jednoho konce kluziště na druhý. Smí se jen vpřed nebo do stran. Poslední chycená ovečka je vlkem v dalším kole.",s:"Hry"},
+ {n:"Rybičky a rybáři",c:"Honičky",lv:1,sf:"obojí",d:"Rybáři (zpočátku instruktoři) chytají rybičky přejíždějící plochu. Chycená rybička se stává rybářem. Chytá se dotykem nebo pěnovou žížalou.",s:"ŠKOLIČKA"},
+ {n:"Chobotničky",c:"Honičky",lv:2,sf:"obojí",d:"Jako Rybičky a rybáři, ale chycení se stávají „chapadly“ – zůstanou stát na místě a chytají rukama ty, kdo jedou kolem.",s:"Dětské dny"},
+ {n:"Stíhaná",c:"Honičky",lv:3,sf:"led",d:"3–5 bruslařů se stejnými rozestupy na kruhu se honí stejným směrem. Kdo je dostižen, vypadává.",s:"Hry"},
+ {n:"Komáří repelent",c:"Honičky",lv:2,sf:"obojí",d:"Komár chytá. Chycený se „drbe“, dva kamarádi ho obklopí za ruce a řeknou „Komáří repelent!“ – tím ho vysvobodí.",t:"kužel pro označení komára",s:"Inline"},
+ {n:"Vláček (honička)",c:"Honičky",lv:2,sf:"obojí",d:"Dvě lokomotivy chytají. Chycený se chytí lokomotivy za pas a jezdí ve vláčku. Vyhrává delší vlak.",s:"Inline"},
+ {n:"Balónky",c:"Honičky",lv:2,sf:"obojí",d:"Všichni jsou balónky, jeden je Špendlík, jeden Pumpička. Propíchnutý balónek si sedne do dřepu a čeká, až ho Pumpička nafoukne.",t:"barevné kužely na označení",s:"Inline"},
+ {n:"Ocásek",c:"Honičky",lv:2,sf:"obojí",d:"Každý má za pasem tkaničku jako ocásek. Chytač sbírá ocásky. Instruktor může mít ocásky navíc na „druhou šanci“.",v:"Kdo pochytá víc ocásků? – 2–3 chytači soupeří mezi sebou.",t:"tkaničky",s:"Inline"},
+ {n:"Honička v týmu",c:"Honičky",lv:3,sf:"obojí",d:"Nechytá jedno dítě, ale dvojice nebo trojice. Velikost týmu podle prostoru a počtu dětí.",s:"Inline"},
+ {n:"Domeček",c:"Honičky",lv:3,sf:"obojí",d:"Hráči v kruhu, každý ve svém domečku. Jeden obíhá kolem a dotykem vybere hráče, který ho musí chytit, než doběhne do uvolněného domečku.",s:"Hry"},
+ // ŠTAFETY
+ {n:"Předávání štafety",c:"Štafety",lv:1,sf:"obojí",d:"Dvě družstva. Po startu dojít nebo dojet ke kuželce a zpět, předat tlesknutím. Vhodné i pro úplné začátečníky – chůze je povolena.",s:"První hodina"},
+ {n:"Přenášená",c:"Štafety",lv:2,sf:"obojí",d:"Každé družstvo má 3 předměty na startu a 3 mety v různé vzdálenosti. První hráč odnese předměty k metám, další je vrací.",s:"Hry"},
+ {n:"Štafeta ve dvojicích",c:"Štafety",lv:3,sf:"obojí",d:"Dráhu jedou dvojice: jeden tlačí druhého, táhne ho při jízdě vzad, jedou za ruce stromečkem, vlnovkou nebo společně slalom.",s:"Hry"},
+ {n:"Tunel",c:"Štafety",lv:2,sf:"obojí",d:"Družstvo ve dvojicích drží ruce nahoře jako tunel. První dvojice tunelem podjede a postaví se na konec. Vyhrává družstvo, které se nejrychleji prostřídá.",s:"Hry"},
+ {n:"Hadi",c:"Štafety",lv:1,sf:"obojí",d:"Zástup dětí. Míč se posílá od prvního pod nohama dozadu, poslední přeťapká dopředu a jde se znovu, dokud se všichni nevystřídají vpředu.",s:"ŠKOLIČKA"},
+ {n:"Živý slalom",c:"Štafety",lv:3,sf:"obojí",d:"Bruslař projíždí slalomem mezi ostatními, kteří stojí v zástupu, a zařadí se na konec. Instruktor určí počet kol.",s:"Hry"},
+ // POHYBOVÉ HRY
+ {n:"Podjíždění",c:"Pohybové hry",lv:3,sf:"obojí",d:"Dvě řady se proti sobě rozjedou. Jedna drží ruce nahoře, druhá je podjíždí. Pak výměna.",s:"Hry"},
+ {n:"Kdo nejdál",c:"Pohybové hry",lv:2,sf:"obojí",d:"Po rozjezdu dojet co nejdál určitým způsobem: ve dřepu, po jedné noze, ve váze. Místo dojetí si každý označí kuželem.",s:"Hry · Inline"},
+ {n:"Největší stromeček",c:"Pohybové hry",lv:3,sf:"obojí",d:"Hráči v řadě s velkými rozestupy přejedou určenou vzdálenost stromečkem s co nejmenším počtem odrazů.",s:"Hry"},
+ {n:"Vystřelování raket",c:"Pohybové hry",lv:3,sf:"led",d:"Trojice: prostřední je raketa, krajní motory. Motory raketu rozjedou a vystřelí co nejdál. Obměna: prostřední je motor.",s:"Hry"},
+ {n:"Vystřelovaná",c:"Pohybové hry",lv:3,sf:"led",d:"Řada drží za ruce, rozdělení na první a druhé. První táhnou a vystřelují druhé vpřed. Pak výměna.",s:"Hry"},
+ {n:"Pumpa",c:"Pohybové hry",lv:2,sf:"obojí",d:"Dvojice za ruce, střídavě se jeden snižuje do dřepu a druhý stoupá.",s:"Hry"},
+ {n:"Kolotoč",c:"Pohybové hry",lv:3,sf:"led",d:"Dvojice za pravou nebo levou ruku se roztáčí. Varianta se švihadlem – jeden roztáčí druhého.",t:"švihadlo",s:"Hry"},
+ {n:"Koníci",c:"Pohybové hry",lv:2,sf:"obojí",d:"Ve dvojici jeden pomocí švihadla táhne druhého, který jede v základním postoji.",t:"švihadlo",s:"Hry"},
+ {n:"Stíny",c:"Pohybové hry",lv:3,sf:"obojí",d:"Ve dvojici jeden jede různými způsoby, druhý za ním vše napodobuje.",s:"Hry"},
+ {n:"Vzájemné objíždění",c:"Pohybové hry",lv:3,sf:"obojí",d:"Dvě řady proti sobě, dvojice se střídavě objíždějí. Způsob se určí předem: po obou bruslích, po jedné, s obratem o 180° nebo 360°.",s:"Hry"},
+ {n:"Limbo",c:"Pohybové hry",lv:2,sf:"obojí",d:"Podjíždění pěnové žížaly, která se snižuje každé kolo.",t:"pěnová žížala",s:"Dětské dny"},
+ {n:"Výlet do ZOO",c:"Pohybové hry",lv:1,sf:"obojí",d:"Na povel napodobujeme zvířata: medvěd, čáp, krab, tučňák, rak, had, opice. Viz metodická řada ZOO.",s:"Propagační lekce"},
+ // NA SIGNÁL
+ {n:"Kuba řekl",c:"Na signál",lv:1,sf:"obojí",d:"Děti plní pokyn jen tehdy, když začíná „Kuba řekl…“ (zvedni nohu, vzpaž, dřep, dotkni se ledu). Kdo splní pokyn bez úvodu, udělá legrační úkol.",s:"První hodina"},
+ {n:"Strážník",c:"Na signál",lv:3,sf:"obojí",d:"Instruktor jako strážník ukazuje směr: vpravo, vlevo, vpřed, vzad. Při změně pokynu je nutné rychle zastavit a plnit nový.",s:"Hry"},
+ {n:"Tornádo, bomba, povodeň",c:"Na signál",lv:2,sf:"led",d:"Volná jízda po ploše. Tornádo = utvořit dvojici/trojici. Bomba = zabrzdit, kleknout, zakrýt hlavu. Povodeň = chytit se mantinelu a zvednout nohy.",s:"Hry"},
+ {n:"Úkoly na signál",c:"Na signál",lv:3,sf:"obojí",d:"Při jízdě po obvodu na signál dřep, výskok, obrat, brzda, leh na břicho. Obměna: tři signály, tři úkoly.",s:"Hry"},
+ {n:"Udělej pózu",c:"Na signál",lv:3,sf:"obojí",d:"Rozjezd naplno, na signál póza na jedné noze (čáp, váha, vozíček). Vyhrává, kdo vydrží nejdéle.",s:"Hry"},
+ {n:"Červená – zelená (Policajti)",c:"Na signál",lv:1,sf:"obojí",d:"Na zelenou se jede, na červenou se stojí jako socha. Kdo se pohne, vrací se o kus zpět.",s:"Propagační lekce"},
+ {n:"Škatulata",c:"Na signál",lv:1,sf:"obojí",d:"Na povel utvořit skupinku o daném počtu (Jablka v pytlíku) a v ní udělat zvířátko nebo prvek – otočka, dřep, klek.",s:"ŠKOLIČKA"},
+ {n:"Semafor",c:"Na signál",lv:1,sf:"obojí",d:"Děti jezdí v kruhu kolem instruktora. Barva zvednutého kuželu určuje postoj (např. červená V, modrá A, žlutá T, zelená dřep).",t:"barevné kužely",s:"Inline"},
+ {n:"Na lyžaře",c:"Na signál",lv:1,sf:"inline",d:"Děti stojí, instruktor udává strany a hrany, na které se mají naklánět. Hlídat, aby stály na obou nohách.",s:"Inline"},
+ {n:"Na vlně",c:"Na signál",lv:1,sf:"inline",d:"Děti v řadě s rozestupy. Na „vlna zepředu“ nebo „zezadu“ provedou nacvičený pád.",s:"Inline"},
+ // TÝMOVÉ / S MÍČKY
+ {n:"Přehazování balónků (Vyhazování odpadků)",c:"Týmové",lv:1,sf:"obojí",d:"Dva týmy, dělicí čára ze žížal. Každý tým přesouvá míčky ze své poloviny na soupeřovu. Po signálu se spočítá, kdo má méně.",t:"míčky, žížaly",s:"ŠKOLIČKA"},
+ {n:"Straky",c:"Týmové",lv:3,sf:"obojí",d:"Každé družstvo má hnízdo (obruč) s vajíčky. Družstva si navzájem kradou vajíčka po jednom. Hra tělem není dovolena.",t:"obruče, míčky nebo puky",s:"Hry"},
+ {n:"Lovci",c:"Týmové",lv:3,sf:"obojí",d:"Tři týmy. Vždy jeden z týmu vyráží na lov a vezme jinému týmu kužel. Na konci: vlastní kužel doma = 3 body, cizí = 2 body.",t:"barevné kužely",s:"Inline"},
+ {n:"Komisař",c:"Týmové",lv:3,sf:"obojí",d:"Kužely rozházené po ploše, týmy je nosí domů. Koho chytí komisař (instruktor), nechá kužel ležet a vrací se bez něj.",t:"kužely",s:"Inline"},
+ {n:"Hra s čísly",c:"Týmové",lv:3,sf:"obojí",d:"Kartičky s čísly 1–20 v barvách týmů leží rubem nahoru. Týmy je vozí ve správném pořadí. Vyhrává, kdo první doveze všech 20.",t:"kartičky s čísly",s:"Inline"},
+ {n:"Poztrácené korále",c:"Týmové",lv:1,sf:"obojí",d:"Instruktor vysype všechny míčky na led, děti je co nejrychleji sesbírají a vrátí do koše. Skvělý úklid na konec.",t:"míčky, koš",s:"Propagační lekce"},
+ {n:"Rychle posbírej",c:"Týmové",lv:2,sf:"obojí",d:"Předměty rozházené po ploše, smí se brát jen jeden kus. Vyhrává, kdo nasbírá nejvíc.",t:"puky, míče, kelímky",s:"Hry"},
+ {n:"Bořiči a stavitelé",c:"Týmové",lv:2,sf:"obojí",d:"Jeden tým kužely staví, druhý shazuje. Po minutě se spočítají stojící kužely a týmy se prohodí.",t:"velké kužely",s:"Dětské dny"},
+ {n:"Minihokej / Inline hokej",c:"Týmové",lv:3,sf:"obojí",d:"Dva týmy, brankář, nahrávky. Pravidla zjednodušená – jde o zábavu. Branky lze nahradit kužely nebo botami.",t:"hokejky, míček/puk, branky",s:"Dětské dny · Inline"},
+ {n:"Inline fotbal",c:"Týmové",lv:3,sf:"inline",d:"Fotbal na bruslích s velkým měkkým míčem.",t:"balón, branky",s:"Inline"},
+ // RYCHLOST
+ {n:"Nezvedej nohy",c:"Rychlost",lv:2,sf:"obojí",d:"Závod na rychlost s podmínkou, že se brusle nesmí zvednout z ledu – jen buřtíky.",s:"Hry"},
+ {n:"Rychlý úsek",c:"Rychlost",lv:3,sf:"obojí",d:"Při jízdě po obvodu se jede naplno jen ve vymezeném úseku, nebo začátek a konec naplno na zvukový signál.",s:"Hry"},
+ {n:"Rychlé kolo",c:"Rychlost",lv:4,sf:"obojí",d:"Jedno kolo volně, další naplno. Počet opakování podle věku a vyspělosti.",s:"Hry"},
+ {n:"Dostat se na konec",c:"Rychlost",lv:1,sf:"led",d:"Dostat se jakýmkoliv způsobem od poloviny hřiště na konec – chůzí, po kolenou, po zadku. 3× za sebou. Ideální první kontakt s ledem.",s:"První hodina"},
+ // OLYMPIÁDA
+ {n:"Mini olympiáda",c:"Akce a soutěže",lv:1,sf:"led",d:"Stanoviště podle sportů: Lední hokej (střelba na branku), Skeleton (závod s velrybami / hrazdičkami), Curling (posílání puku nebo kamene do kruhu), Biatlon (dráha s házením míčku do koše), Krasobruslení (tanec na hudbu), Limbo.",t:"hrazdičky, branky, koš, hudba",s:"Dětské dny"},
+ {n:"Závod na velrybách",c:"Akce a soutěže",lv:1,sf:"led",d:"Děti sedí na velrybě (hrazdičce) a kamarád nebo instruktor je co nejrychleji dotlačí přes úsek.",t:"velryby / hrazdičky",s:"Dětské dny"},
+ {n:"Žížaly a koš",c:"Akce a soutěže",lv:2,sf:"led",d:"Přenášení míče pomocí dvou pěnových žížal do koše. Ve dvojici nebo jednotlivě.",t:"žížaly, míče, koš",s:"Dětské dny"},
+ {n:"Masky na ledě",c:"Akce a soutěže",lv:1,sf:"led",d:"Karnevalové bruslení: představení masek, soutěže v maskách, tanec na hudbu. Vhodné pro dětské dny a závěr sezóny.",s:"Dětské dny"}
+];
+
+/* ===================== LEKCE ===================== */
+const LESSONS = [
+ {t:"Kurz Základy bruslení · osnova",tag:"Školní bruslení · 6–12 let · 4 lekce",p:"Obsahová osnova skupinového kurzu. Každou lekci skládáme ze stavby rozehřátí → stanoviště → hry a cvičení bereme z odpovídajících kroků metodické řady.",rows:[
+  ["1. lekce","Stupeň 1–2",["Seznámení s ledem, pády a vstávání","Jízda vpřed – buřtíky","Hry"]],
+  ["2. lekce","Stupeň 2–3",["Jízda vpřed – koloběžka, střídavé odrazy","Zatáčení, oblouky","Zlepšení rovnováhy (ZOO, přeskoky)","Hry"]],
+  ["3. lekce","Stupeň 2–4",["Brzdění – přívrat, u šikovných smyk","Koordinační hry na signál"]],
+  ["4. lekce","Stupeň 3–4",["Jízda vzad","Obraty vpřed ↔ vzad","Hry"]]]},
+ {t:"První hodina na ledě",tag:"Kroužek · 45 min · úplní začátečníci",p:"Vzor klasické hodiny bez stanovišť.",rows:[
+  ["Úvodní část","6 min",["Seznámení s ledem – děti si podle sebe stoupnou na led s dopomocí či bez a zkoušejí jeho vlastnosti","Hra: Dostat se jakýmkoliv způsobem od poloviny hřiště na konec (3×)"]],
+  ["Průpravná část","5 min",["Rozcvičení hrou Kuba řekl – děti sledují instruktora a dávají pozor na pokyny (zvednout jednu nohu, vzpažit…)"]],
+  ["Hlavní část","24 min",["Chůze s oporou podél mantinelu na jednu i druhou stranu – zpevněné kotníky, mírně pokrčená kolena, váha uprostřed chodidel","Chůze bez opory – přejít šířku kluziště, připomínáme totéž","Zvedání se z ledu – názorná ukázka, pak hra Kdo se první bez opory postaví?","Zvedat nohy od ledu – stoj upažmo, zvedání kolen (Čápi)"]],
+  ["Závěrečná část","10 min",["Předávání štafety – dvě družstva dojdou či doběhnou ke kuželce a zpět","Společná hra, volné bruslení"]]]},
+ {t:"ŠKOLIČKA · lekce 1",tag:"60 min · 4 stanoviště",rows:[
+  ["Rozehřátí","10 min",["První kroky mimo led: přenášení váhy, podřepy, chůze po špičkách a patách","Na ledě u mantinelu: běhání, škrabání ledu, podřepy, stoj na jedné noze, pády a vstávání"]],
+  ["Stanoviště","30 min",null,["Jednoduchý slalom","Sochy","Přehazování balónků","Rybičky a rybáři"]],
+  ["Společné hry","10 min",["Volné hry dle nálady skupiny"]]]},
+ {t:"ŠKOLIČKA · lekce 2",tag:"60 min · 4 stanoviště",rows:[
+  ["Rozehřátí","10 min",["První kroky mimo led","První kroky na ledě u mantinelu, pády a vstávání"]],
+  ["Stanoviště","30 min",null,["Sbírání jablek","Maminka říká…","Základní postoj na TEĎ","Slalom se žížalou"]],
+  ["Společné hry","10 min",["Mrazík nebo Červená – zelená"]]]},
+ {t:"ŠKOLIČKA · lekce 3",tag:"60 min · 3 stanoviště",rows:[
+  ["Rozehřátí","10 min",["První kroky na ledě u mantinelu, pády a vstávání","Základní postoj – děti tančí a na TEĎ zaujmou postoj"]],
+  ["Stanoviště","30 min",null,["ZOO","Žabky","Buřtík ke kuželu"]],
+  ["Společné hry","10 min",["Škatulata – skupinky a zvířátka","Rybičky a rybáři – chytá se žížalou"]]]},
+ {t:"ŠKOLIČKA · lekce 4",tag:"60 min · 4 stanoviště",rows:[
+  ["Rozehřátí","10 min",["ZOO","Buřtíky – nejdřív na místě, pak více za sebou ke kuželům"]],
+  ["Stanoviště","30 min",null,["Zamražené nožičky","Vláček","Kostky","Zrcadlo"]],
+  ["Společné hry","10 min",["Mrazík s pěnovou žížalou","Přehazování balónků"]]]},
+ {t:"ŠKOLIČKA · lekce 5",tag:"60 min · 4 stanoviště",rows:[
+  ["Rozehřátí","10 min",["ZOO","Buřtíky za sebou"]],
+  ["Stanoviště","30 min",null,["Koloběžka","Limbo","Bořiči a stavitelé","Klouzačka"]],
+  ["Společné hry","10 min",["Přehazování balónků","Hadi"]]]},
+ {t:"Propagační lekce",tag:"60 min · 4–8 a 8–15 let",p:"Ukázková hodina pro nové děti a rodiče.",rows:[
+  ["Start","10 min",["Děti ťapkají podél mantinelu","Krátké seznámení s ledem a jak vstávat","Rozdělení do stanovišť"]],
+  ["Stanoviště","35 min",null,["Had v korunách stromů","Sázení rajčat","Opičí dráha","Vyhazování odpadků","Výlet do ZOO"]],
+  ["Společné hry","15 min",["Policajti (Červená – zelená)","Jablka v pytlíku (Škatulata)","Poztrácené korále"]]]},
+ {t:"Dětský den na ledě",tag:"Odpoledne 13:30–18:00",p:"Rámcový program akce pro veřejnost.",rows:[
+  ["13:30","30 min",["Zahajovací ceremoniál / představení masek, verbování dětí do školičky"]],
+  ["14:00","60 min",["Školička bruslení – základní průprava (stanoviště)"]],
+  ["15:15","~90 min",["Zimní olympiáda: hokej, skeleton na velrybách, curling, biatlon, krasobruslení, limbo"]],
+  ["16:50","20 min",["Společné hry: Červená – zelená, Přehazování míčků, Rybičky a rybáři, Chobotničky, Bořiči a stavitelé"]],
+  ["17:00","60 min",["Dětská diskotéka na ledě"]]]}
+];
+
+/* ===================== RENDER ===================== */
+const LVN = {1:"Seznámení",2:"Základy",3:"Jízda",4:"Pokročilí"};
+const esc = s => String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const lvChip = lv => `<span class="chip s${lv}">St. ${lv} · ${LVN[lv]}</span>`;
+
+function renderSteps(list, el){
+  el.innerHTML = list.map((s,i)=>`
+  <article class="step s${s.lv}">
+    <div class="rail"><span class="n">${i+1}</span><span class="mono">${LVN[s.lv]}</span></div>
+    <div class="body">
+      <div class="top"><h3>${esc(s.name)}</h3>${lvChip(s.lv)}${s.new?'<span class="chip new">rozšíření</span>':''}</div>
+      <p class="goal"><strong>Cíl:</strong> ${esc(s.goal)}</p>
+      <p class="tech">${s.tech}</p>
+      <div class="cols">
+        <div><h4>Postup nácviku</h4><ol>${s.how.map(x=>`<li>${esc(x)}</li>`).join("")}</ol></div>
+        <div><h4>Časté chyby</h4><ol class="err">${s.err.map(x=>`<li>${esc(x)}</li>`).join("")}</ol></div>
+        <div><h4>Co říkat dětem</h4><div class="cue">${s.cue.map(x=>`<span>„${esc(x)}“</span>`).join("")}</div>
+          <h4 style="margin-top:14px">Navazující hry</h4><div class="cue">${s.games.map(x=>`<span style="font-style:normal">${esc(x)}</span>`).join("")}</div></div>
+      </div>
+    </div>
+  </article>`).join("");
+}
+renderSteps(STEPS, document.getElementById("steps"));
+renderSteps(INLINE, document.getElementById("inline-steps"));
+
+function makeFilter({root,cards,data,groups,render,searchId}){
+  const state = {q:""}; groups.forEach(g=>state[g.key]="all");
+  root.innerHTML = groups.map(g=>`<div class="grp" role="group" aria-label="${g.label}"><span>${g.label}</span>${
+    [["all","Vše"],...g.opts].map(([v,l])=>`<button class="fbtn" data-k="${g.key}" data-v="${v}" aria-pressed="${v==="all"}">${l}</button>`).join("")}</div>`).join("")
+    + `<input class="search" id="${searchId}" type="search" placeholder="Hledat název nebo pomůcku…" aria-label="Hledat"><span class="count" aria-live="polite"></span>`;
+  const count = root.querySelector(".count");
+  function draw(){
+    const q = state.q.toLowerCase();
+    const res = data.filter(x => groups.every(g => state[g.key]==="all" || g.test(x, state[g.key]))
+      && (!q || (x.n+" "+(x.d||"")+" "+(x.t||"")+" "+(x.f||"")).toLowerCase().includes(q)));
+    cards.innerHTML = res.length ? res.map(render).join("") : `<div class="empty" style="grid-column:1/-1">Nic neodpovídá filtru. Zkuste zrušit některou volbu.</div>`;
+    count.textContent = `${res.length} / ${data.length}`;
+  }
+  root.addEventListener("click", e=>{
+    const b = e.target.closest(".fbtn"); if(!b) return;
+    state[b.dataset.k] = b.dataset.v;
+    root.querySelectorAll(`.fbtn[data-k="${b.dataset.k}"]`).forEach(x=>x.setAttribute("aria-pressed", x===b));
+    draw();
+  });
+  root.querySelector(".search").addEventListener("input", e=>{state.q=e.target.value; draw();});
+  draw();
+}
+
+const lvOpts = [["1","1"],["2","2"],["3","3"],["4","4"]];
+makeFilter({
+  root:document.getElementById("ex-filters"), cards:document.getElementById("ex-cards"), data:EX, searchId:"ex-search",
+  groups:[{key:"lv",label:"Stupeň",opts:lvOpts,test:(x,v)=>x.lv==v}],
+  render:x=>`<article class="card"><span class="cat">${esc(x.f)}</span><h3>${esc(x.n)}</h3><p>${esc(x.d)}</p>
+    <p class="tools"><b>Pomůcky:</b> ${esc(x.t)}</p>
+    <div class="foot">${lvChip(x.lv)}${x.new?'<span class="chip new">rozšíření</span>':`<span class="chip plain">${esc(x.s)}</span>`}</div></article>`
+});
+
+const cats = [...new Set(G.map(g=>g.c))];
+makeFilter({
+  root:document.getElementById("game-filters"), cards:document.getElementById("game-cards"), data:G, searchId:"game-search",
+  groups:[
+    {key:"c",label:"Typ",opts:cats.map(c=>[c,c]),test:(x,v)=>x.c===v},
+    {key:"lv",label:"Od stupně",opts:lvOpts,test:(x,v)=>x.lv<=v},
+    {key:"sf",label:"Povrch",opts:[["led","Led"],["inline","Inline"]],test:(x,v)=>x.sf===v||x.sf==="obojí"}
+  ],
+  render:x=>`<article class="card"><span class="cat">${esc(x.c)} · ${x.sf==="obojí"?"led i inline":esc(x.sf)}</span><h3>${esc(x.n)}</h3><p>${esc(x.d)}</p>
+    ${x.v?`<p class="var">${esc(x.v)}</p>`:""}${x.t?`<p class="tools"><b>Pomůcky:</b> ${esc(x.t)}</p>`:""}
+    <div class="foot">${lvChip(x.lv)}<span class="chip plain">${esc(x.s)}</span></div></article>`
+});
+
+document.getElementById("lessons").innerHTML = LESSONS.map(L=>`
+  <article class="lesson">
+    <header><h3>${esc(L.t)}</h3><span class="chip plain">${esc(L.tag)}</span>${L.p?`<p>${esc(L.p)}</p>`:""}</header>
+    <div class="tablebox"><table class="ltable"><tbody>${L.rows.map(([a,b,items,st])=>`
+      <tr><th scope="row">${esc(a)}<small>${esc(b)}</small></th><td>${
+        st ? `<div class="stations">${st.map((s,i)=>`<div><i>Stanoviště ${i+1}</i>${esc(s)}</div>`).join("")}</div>`
+           : `<ul>${items.map(x=>`<li>${esc(x)}</li>`).join("")}</ul>`}</td></tr>`).join("")}
+    </tbody></table></div>
+  </article>`).join("");
+</script>
+</body>
+</html>

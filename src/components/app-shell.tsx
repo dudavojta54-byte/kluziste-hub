@@ -18,6 +18,7 @@ import {
   Wallet,
   CalendarCheck,
   ListChecks,
+  BookOpen,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -58,6 +59,7 @@ const NAV: NavItem[] = [
   { href: "/vykazy", label: "Výkazy a odměny", icon: Wallet, mobile: true },
   { href: "/tym", label: "Tým a kontakty", icon: Contact },
   { href: "/oznameni", label: "Oznámení", icon: Megaphone },
+  { href: "/prirucka", label: "Příručka instruktora", icon: BookOpen },
   { href: "/info", label: "Provozní info", icon: FileText },
   { href: "/sprava", label: "Správa", icon: Settings, admin: true },
 ];
