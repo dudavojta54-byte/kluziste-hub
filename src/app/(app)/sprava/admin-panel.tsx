@@ -148,13 +148,13 @@ function Users() {
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-1">
                           {info && !info.last_sign_in_at && p.is_active && (
-                            <>
-                              <Button variant="ghost" size="sm" disabled={pending} onClick={() => run(() => resendInvite(info.email))}><RotateCcw /> Znovu poslat</Button>
-                              <Button variant="ghost" size="sm" disabled={pending}
-                                onClick={() => makeLink({ email: info.email, first_name: p.first_name || "-", last_name: p.last_name || "-", role: "instructor" })}>
-                                <Link2 /> Odkaz
-                              </Button>
-                            </>
+                            <Button variant="ghost" size="sm" disabled={pending} onClick={() => run(() => resendInvite(info.email))}><RotateCcw /> Znovu poslat</Button>
+                          )}
+                          {info && p.is_active && p.id !== me.id && (
+                            <Button variant="ghost" size="sm" disabled={pending} title="Odkaz pro nastavení hesla bez e-mailu"
+                              onClick={() => makeLink({ email: info.email, first_name: p.first_name || "-", last_name: p.last_name || "-", role: "instructor" })}>
+                              <Link2 /> Odkaz
+                            </Button>
                           )}
                           {p.id !== me.id && (p.is_active ? (
                             <Button variant="ghost" size="sm" className="text-destructive" disabled={pending}
@@ -364,7 +364,7 @@ function InviteLinkDialog({ info, onClose }: { info: { link: string; message: st
       <DialogContent className="sm:max-w-lg">
         <DialogHeader><DialogTitle>Odkaz pozvánky</DialogTitle></DialogHeader>
         <p className="text-sm text-muted-foreground">{info?.message} Pošlete tento odkaz jen dané osobě – po otevření si nastaví heslo.
-          Odkaz je jednorázový a platí omezenou dobu (výchozí 1 hodina, lze změnit v Supabase).</p>
+          Odkaz je jednorázový a platí omezenou dobu (výchozí 1 hodina). Náhled odkazu v chatu ho nespotřebuje – použije se až kliknutím na „Přijmout pozvánku“.</p>
         <Input readOnly value={info?.link ?? ""} onFocus={(e) => e.currentTarget.select()} className="font-mono text-xs" />
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>Zavřít</Button>
