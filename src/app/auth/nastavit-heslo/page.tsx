@@ -24,9 +24,15 @@ export default function SetPasswordPage() {
     if (problem) return setError(problem);
     if (password !== confirm) return setError("Hesla se neshodují.");
     setBusy(true);
-    const { error } = await getSupabase().auth.updateUser({ password });
+    const { error } = await getSupabase().auth.updateUser({ password, data: { must_change_password: false } });
     setBusy(false);
-    if (error) return setError(error.message.includes("session") ? "Odkaz vypršel – požádejte o nový." : error.message);
+    if (error) {
+      return setError(
+        /session/i.test(error.message) ? "Nejste přihlášen(a) – otevřete znovu odkaz nebo se přihlaste dočasným heslem." :
+        /different from the old/i.test(error.message) ? "Nové heslo musí být jiné než dočasné heslo." :
+        error.message,
+      );
+    }
     router.replace("/");
     router.refresh();
   };
@@ -38,7 +44,7 @@ export default function SetPasswordPage() {
           <Logo small />
           <div>
             <h1 className="text-xl font-bold">Nastavení hesla</h1>
-            <p className="text-sm text-muted-foreground">Vítejte v Instructor Hubu.</p>
+            <p className="text-sm text-muted-foreground">Zvolte si vlastní heslo, kterým se budete přihlašovat.</p>
           </div>
         </div>
         {error && (

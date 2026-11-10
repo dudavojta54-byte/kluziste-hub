@@ -273,4 +273,5 @@ export interface SessionUser {
   email: string;
   profile: Profile;
   roles: AppRole[];
+  mustChangePassword?: boolean;
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Copy, Link2, MailPlus, Plus, RotateCcw, Save, Trash2, UserCheck, UserX } from "lucide-react";
+import { Copy, KeyRound, Link2, MailPlus, Plus, RotateCcw, Save, Trash2, UserCheck, UserX } from "lucide-react";
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
 import { Field, LoadingList, NativeSelect, PageHeader, Spinner, ToneBadge, TypeDot, UserAvatar } from "@/components/common";
@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { CONTACT_CATEGORY, ROLE_LABELS } from "@/lib/constants";
 import { fmtDateTime, fullName } from "@/lib/format";
@@ -18,7 +19,9 @@ import { getSupabase } from "@/lib/supabase/client";
 import type { AppRole, Contact, ContactCategory } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { createInviteLink, inviteUser, listUserEmails, resendInvite, setUserActive } from "./actions";
+import {
+  createInviteLink, createUserWithTempPassword, inviteUser, listUserEmails, resendInvite, setTemporaryPassword, setUserActive,
+} from "./actions";
 
 const TABS = [
   ["users", "Uživatelé"], ["locations", "Lokality"], ["types", "Programy a kredity"],
@@ -75,9 +78,21 @@ function Users() {
       qc.invalidateQueries({ queryKey: ["admin"] });
     });
 
+  const [pwInfo, setPwInfo] = useState<{ email: string; password: string; message: string } | null>(null);
+  const showPassword = (fn: () => ReturnType<typeof setTemporaryPassword>, resetForm = false) =>
+    start(async () => {
+      const r = await fn();
+      if (!r.ok) { toast.error(r.error); return; }
+      setPwInfo({ email: r.email, password: r.password, message: r.message });
+      if (resetForm) setF({ email: "", first_name: "", last_name: "", role: "instructor" });
+      qc.invalidateQueries({ queryKey: ["team"] });
+      qc.invalidateQueries({ queryKey: ["admin"] });
+    });
+
   return (
     <div className="space-y-6">
       <InviteLinkDialog info={linkInfo} onClose={() => setLinkInfo(null)} />
+      <TempPasswordDialog info={pwInfo} onClose={() => setPwInfo(null)} />
       <Card className="gap-3 p-4 sm:p-5">
         <h2 className="flex items-center gap-2 font-semibold"><MailPlus className="size-4" /> Pozvat nového člena</h2>
         <div className="grid gap-3 sm:grid-cols-5 sm:items-end">
@@ -94,8 +109,12 @@ function Users() {
         </div>
         <div className="flex flex-wrap gap-2">
         <Button className="w-fit" disabled={pending || !f.email || !f.first_name || !f.last_name}
+          onClick={() => showPassword(() => createUserWithTempPassword(f), true)}>
+          {pending ? <Spinner /> : <KeyRound />} Založit s dočasným heslem
+        </Button>
+        <Button variant="outline" className="w-fit" disabled={pending || !f.email || !f.first_name || !f.last_name}
           onClick={() => run(async () => { const r = await inviteUser(f); if (r.ok) setF({ email: "", first_name: "", last_name: "", role: "instructor" }); return r; })}>
-          {pending ? <Spinner /> : <MailPlus />} Odeslat pozvánku
+          <MailPlus /> Odeslat pozvánku e-mailem
         </Button>
         <Button variant="outline" className="w-fit" disabled={pending || !f.email || !f.first_name || !f.last_name}
           onClick={() => makeLink(f, true)}>
@@ -103,8 +122,9 @@ function Users() {
         </Button>
         </div>
         <p className="text-xs text-muted-foreground">
-          „Odeslat pozvánku“ pošle e-mail. „Vytvořit odkaz“ jen založí účet a ukáže odkaz, který pošlete sami (WhatsApp, SMS) –
-          hodí se, když Supabase omezí počet e-mailů. Veřejná registrace je vypnutá.
+          <b>Doporučeno: „Založit s dočasným heslem“</b> – ukáže e-mail a heslo, které instruktorovi pošlete (WhatsApp, SMS).
+          Heslo nevyprší; po prvním přihlášení si instruktor nastaví vlastní. E-mailová pozvánka a odkaz platí jen 1 hodinu
+          a každý nový odkaz zneplatní předchozí. Veřejná registrace je vypnutá.
         </p>
       </Card>
 
@@ -151,7 +171,13 @@ function Users() {
                             <Button variant="ghost" size="sm" disabled={pending} onClick={() => run(() => resendInvite(info.email))}><RotateCcw /> Znovu poslat</Button>
                           )}
                           {info && p.is_active && p.id !== me.id && (
-                            <Button variant="ghost" size="sm" disabled={pending} title="Odkaz pro nastavení hesla bez e-mailu"
+                            <Button variant="ghost" size="sm" disabled={pending} title="Nové dočasné heslo (nevyprší)"
+                              onClick={() => confirm(`Nastavit ${fullName(p)} nové dočasné heslo? Dosavadní heslo přestane platit.`) && showPassword(() => setTemporaryPassword(p.id))}>
+                              <KeyRound /> Dočasné heslo
+                            </Button>
+                          )}
+                          {info && p.is_active && p.id !== me.id && (
+                            <Button variant="ghost" size="sm" disabled={pending} title="Odkaz pro nastavení hesla bez e-mailu (platí 1 hodinu)"
                               onClick={() => makeLink({ email: info.email, first_name: p.first_name || "-", last_name: p.last_name || "-", role: "instructor" })}>
                               <Link2 /> Odkaz
                             </Button>
@@ -369,6 +395,40 @@ function InviteLinkDialog({ info, onClose }: { info: { link: string; message: st
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>Zavřít</Button>
           <Button onClick={copy}><Copy /> Kopírovat odkaz</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function TempPasswordDialog({ info, onClose }: { info: { email: string; password: string; message: string } | null; onClose: () => void }) {
+  const site = typeof window !== "undefined" ? window.location.origin : "";
+  const text = info
+    ? `Ahoj, tady jsou tvoje přístupy do aplikace Instructor Hub (Kluziště Praha):\n${site}\nE-mail: ${info.email}\nDočasné heslo: ${info.password}\nPo přihlášení si nastavíš vlastní heslo.`
+    : "";
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(text);
+      toast.success("Zpráva zkopírována – vložte ji instruktorovi do chatu.");
+    } catch {
+      toast.error("Kopírování se nezdařilo – označte text a zkopírujte ho ručně.");
+    }
+  };
+  return (
+    <Dialog open={!!info} onOpenChange={(o) => { if (!o) onClose(); }}>
+      <DialogContent className="sm:max-w-lg">
+        <DialogHeader><DialogTitle>Přístupy pro instruktora</DialogTitle></DialogHeader>
+        <p className="text-sm text-muted-foreground">
+          {info?.message} Heslo se zobrazí jen teď – pošlete ho pouze dané osobě. Po přihlášení si ho instruktor musí změnit.
+        </p>
+        <div className="rounded-lg border bg-muted/40 p-3 font-mono text-sm">
+          <div>E-mail: <b>{info?.email}</b></div>
+          <div>Heslo: <b>{info?.password}</b></div>
+        </div>
+        <Textarea readOnly rows={5} value={text} onFocus={(e) => e.currentTarget.select()} className="text-xs" />
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>Zavřít</Button>
+          <Button onClick={copy}><Copy /> Kopírovat zprávu</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

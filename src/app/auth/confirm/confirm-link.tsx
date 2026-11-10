@@ -10,7 +10,17 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { getSupabase } from "@/lib/supabase/client";
 
-const EXPIRED = "Odkaz je neplatný, už byl použit, nebo vypršel. Požádejte správce o nový.";
+const EXPIRED = "Odkaz je neplatný, už byl použit, nebo vypršel. Požádejte správce o dočasné heslo nebo nový odkaz.";
+
+function explain(message: string) {
+  if (/expired|invalid|not found|already/i.test(message)) {
+    return "Odkaz už neplatí – vypršel (platí 1 hodinu), byl už použit, nebo vám mezitím správce vytvořil novější. "
+      + "Požádejte správce o dočasné heslo, to nevyprší.";
+  }
+  if (/rate limit|too many/i.test(message)) return "Příliš mnoho pokusů. Zkuste to za chvíli znovu.";
+  if (/fetch|network/i.test(message)) return "Nepodařilo se spojit se serverem. Zkontrolujte připojení k internetu.";
+  return `${EXPIRED} (${message})`;
+}
 
 /**
  * Cíl odkazů z pozvánek a obnovy hesla.
@@ -43,7 +53,7 @@ export function ConfirmLink() {
         : { error: { message: "missing" } };
     if (res.error) {
       setBusy(false);
-      setError(EXPIRED);
+      setError(explain(res.error.message));
       return;
     }
     router.replace(isPassword ? "/auth/nastavit-heslo" : next);

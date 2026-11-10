@@ -9,18 +9,19 @@ const inviteUserByEmail = vi.fn();
 const upsert = vi.fn();
 const updateUserById = vi.fn();
 const generateLink = vi.fn();
+const createUser = vi.fn();
 const rpc = vi.fn();
 
 vi.mock("@/lib/auth", () => ({ assertRole: (...a: unknown[]) => assertRole(...a) }));
 vi.mock("@/lib/supabase/admin", () => ({
   createSupabaseAdmin: () => ({
-    auth: { admin: { inviteUserByEmail, updateUserById, generateLink } },
+    auth: { admin: { inviteUserByEmail, updateUserById, generateLink, createUser } },
     from: () => ({ upsert }),
   }),
 }));
 vi.mock("@/lib/supabase/server", () => ({ createSupabaseServer: async () => ({ rpc }) }));
 
-const { inviteUser, setUserActive, createInviteLink } = await import("@/app/(app)/sprava/actions");
+const { inviteUser, setUserActive, createInviteLink, setTemporaryPassword, createUserWithTempPassword } = await import("@/app/(app)/sprava/actions");
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -119,5 +120,44 @@ describe("odkaz pozvánky bez e-mailu (obejde limit e-mailů)", () => {
     const r = await inviteUser({ email: "x@example.com", first_name: "X", last_name: "Y", role: "instructor" });
     expect(r).toMatchObject({ ok: false });
     expect((r as { error: string }).error).toMatch(/Vytvořit odkaz/);
+  });
+});
+
+describe("dočasné heslo (nevyprší, vynutí změnu po přihlášení)", () => {
+  const PW = /^[A-Za-z]+-\d{4}-[A-Za-z]+$/;
+
+  test("nový člen: účet potvrzený, heslo splňuje pravidla, příznak změny hesla", async () => {
+    assertRole.mockResolvedValue({ id: "admin" });
+    createUser.mockResolvedValue({ data: { user: { id: "n1" } }, error: null });
+    const r = await createUserWithTempPassword({ email: "Nova@Example.com", first_name: "N", last_name: "O", role: "instructor" });
+    expect(r.ok).toBe(true);
+    const arg = createUser.mock.calls[0][0];
+    expect(arg).toMatchObject({ email: "nova@example.com", email_confirm: true, user_metadata: { must_change_password: true, first_name: "N" } });
+    expect(arg.password).toMatch(PW);
+    expect(arg.password.length).toBeGreaterThanOrEqual(10);
+    expect((r as { password: string }).password).toBe(arg.password);
+  });
+
+  test("existující účet: srozumitelná rada", async () => {
+    assertRole.mockResolvedValue({ id: "admin" });
+    createUser.mockResolvedValue({ data: { user: null }, error: { message: "A user with this email address has already been registered" } });
+    const r = await createUserWithTempPassword({ email: "a@example.com", first_name: "A", last_name: "B", role: "instructor" });
+    expect((r as { error: string }).error).toMatch(/Dočasné heslo/);
+  });
+
+  test("reset hesla existujícímu: potvrdí účet a nastaví příznak", async () => {
+    assertRole.mockResolvedValue({ id: "admin" });
+    updateUserById.mockResolvedValue({ data: { user: { id: "u2", email: "u2@example.com" } }, error: null });
+    const r = await setTemporaryPassword("u2");
+    expect(r).toMatchObject({ ok: true, email: "u2@example.com" });
+    expect(updateUserById.mock.calls[0][1]).toMatchObject({ email_confirm: true, user_metadata: { must_change_password: true } });
+  });
+
+  test("správce si nemůže takto přepsat vlastní heslo; ne-admin vůbec ne", async () => {
+    assertRole.mockResolvedValue({ id: "admin" });
+    expect((await setTemporaryPassword("admin")).ok).toBe(false);
+    assertRole.mockRejectedValue(new Error("K této akci nemáte oprávnění."));
+    expect((await setTemporaryPassword("u2")).ok).toBe(false);
+    expect(updateUserById).not.toHaveBeenCalled();
   });
 });

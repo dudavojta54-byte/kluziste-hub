@@ -19,6 +19,7 @@ export const getSessionUser = cache(async (): Promise<SessionUser | null> => {
     email: auth.user.email ?? "",
     profile: profile as Profile,
     roles: (roles ?? []) as AppRole[],
+    mustChangePassword: auth.user.user_metadata?.must_change_password === true,
   };
 });
 
@@ -26,6 +27,8 @@ export async function requireUser(): Promise<SessionUser> {
   const user = await getSessionUser();
   if (!user) redirect("/login");
   if (!user.profile.is_active) redirect("/login?deaktivovan=1");
+  // přihlášení dočasným heslem od správce => nejdřív si nastavit vlastní
+  if (user.mustChangePassword) redirect("/auth/nastavit-heslo?docasne=1");
   return user;
 }
 

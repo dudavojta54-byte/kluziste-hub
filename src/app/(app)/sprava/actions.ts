@@ -4,6 +4,7 @@ import { assertRole } from "@/lib/auth";
 import { createSupabaseAdmin } from "@/lib/supabase/admin";
 import { createSupabaseServer } from "@/lib/supabase/server";
 import { inviteSchema } from "@/lib/validation";
+import { randomInt } from "node:crypto";
 
 type Result = { ok: true; message: string } | { ok: false; error: string };
 
@@ -135,4 +136,69 @@ export async function listUserEmails(): Promise<Record<string, { email: string; 
     if (data.users.length < 200) break;
   }
   return out;
+}
+
+const WORDS = ["Led", "Brusle", "Puk", "Zima", "Mraz", "Vlocka", "Hokej", "Piruet", "Kluz", "Sanky", "Snih", "Rampa"];
+
+/** Čitelné dočasné heslo, např. „Brusle-4821-Puk“ (min. 10 znaků, písmena i číslice). */
+async function generateTempPassword(): Promise<string> {
+  const w = () => WORDS[randomInt(WORDS.length)];
+  return `${w()}-${String(randomInt(1000, 10000))}-${w()}`;
+}
+
+type PasswordResult = { ok: true; email: string; password: string; message: string } | { ok: false; error: string };
+
+/**
+ * Dočasné heslo pro existující účet – nevyprší jako jednorázové odkazy.
+ * Účet se zároveň potvrdí; po přihlášení aplikace vynutí nastavení vlastního hesla.
+ */
+export async function setTemporaryPassword(userId: string): Promise<PasswordResult> {
+  try {
+    const me = await assertRole("admin");
+    if (userId === me.id) return { ok: false, error: "Vlastní heslo si změňte v Mém profilu." };
+    const admin = createSupabaseAdmin();
+    const password = await generateTempPassword();
+    const { data, error } = await admin.auth.admin.updateUserById(userId, {
+      password,
+      email_confirm: true,
+      user_metadata: { must_change_password: true },
+    });
+    if (error || !data.user) return { ok: false, error: error?.message ?? "Uživatel nenalezen." };
+    return { ok: true, email: data.user.email ?? "", password, message: "Dočasné heslo je nastavené." };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : "Heslo se nepodařilo nastavit." };
+  }
+}
+
+/** Založení nového člena rovnou s dočasným heslem (bez e-mailu a bez odkazu). */
+export async function createUserWithTempPassword(input: unknown): Promise<PasswordResult> {
+  try {
+    await assertRole("admin");
+    const v = inviteSchema.parse(input);
+    const email = v.email.toLowerCase();
+    const admin = createSupabaseAdmin();
+    const password = await generateTempPassword();
+    const { data, error } = await admin.auth.admin.createUser({
+      email,
+      password,
+      email_confirm: true,
+      user_metadata: { first_name: v.first_name, last_name: v.last_name, must_change_password: true },
+    });
+    if (error || !data.user) {
+      return {
+        ok: false,
+        error: error && /already|registered|exists/i.test(error.message)
+          ? "Účet s tímto e-mailem už existuje – v tabulce u něj použijte „Dočasné heslo“."
+          : error?.message ?? "Účet se nepodařilo založit.",
+      };
+    }
+    if (v.role !== "instructor") {
+      const roles = v.role === "admin" ? ["admin", "instructor"] : ["coordinator", "instructor"];
+      const { error: rErr } = await admin.from("user_roles").upsert(roles.map((role) => ({ user_id: data.user!.id, role })));
+      if (rErr) return { ok: false, error: rErr.message };
+    }
+    return { ok: true, email, password, message: `Účet pro ${email} je založený.` };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : "Účet se nepodařilo založit." };
+  }
 }
