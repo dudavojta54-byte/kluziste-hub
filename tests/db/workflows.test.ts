@@ -519,10 +519,19 @@ describe("Pravidla týmu 2026/27: sazby, vykazování, vlastní klient, úrovně
     lia = await createUser(db, { email: "lia@kluziste.test", first: "Lia", last: "Nová" });
   });
 
-  test("sazby programů: běžné 400, individuální 500, vlastní klient 600 Kč/h", async () => {
+  test("sazby se počítají z kreditů programů × hodnota kreditu (200 Kč)", async () => {
     const r = await db.query<{ code: string; rate: number }>("select code, hourly_rate::float8 rate from public.lesson_types");
     const m = Object.fromEntries(r.rows.map((x) => [x.code, x.rate]));
-    expect(m).toMatchObject({ skolicka: 400, schools: 400, animation: 400, special: 400, individual: 500, individual_own: 600 });
+    expect(m).toMatchObject({ skolicka: 400, individual: 500, individual_own: 500, schools: 500, animation: 250, other: 200 });
+    // změna kreditů programu přepočítá sazbu
+    await db.query("update public.lesson_types set credit_multiplier = 3 where code = 'individual_own'");
+    expect((await one<{ r: number }>("select hourly_rate::float8 r from public.lesson_types where code = 'individual_own'"))!.r).toBe(600);
+    await db.query("update public.lesson_types set credit_multiplier = 2.5 where code = 'individual_own'");
+    // hodnotu kreditu mění jen správce
+    await expect(rpc(db, coord, "set_credit_value", [250])).rejects.toThrow();
+    await rpc(db, admin, "set_credit_value", [250]);
+    expect((await one<{ r: number }>("select hourly_rate::float8 r from public.lesson_types where code = 'skolicka'"))!.r).toBe(500);
+    await rpc(db, admin, "set_credit_value", [200]);
   });
 
   test("instruktor vykáže čas, správce schválí jedním klikem, odměna = hodiny × sazba", async () => {
@@ -579,5 +588,40 @@ describe("Pravidla týmu 2026/27: sazby, vykazování, vlastní klient, úrovně
     const s = await rpc<Array<{ user_id: string; tier: string }>>(db, coord, "suggest_instructors", [occ]);
     expect(s[0]).toMatchObject({ user_id: lia, tier: "main" });
     await expect(asUser(db, petr, "update public.profiles set tier = 'main' where id = $1", [petr])).rejects.toThrow(/pouze správce/);
+  });
+});
+
+describe("Odměny za odpracované hodiny v sezóně", () => {
+  let ema: string;
+  beforeAll(async () => {
+    ema = await createUser(db, { email: "ema@kluziste.test", first: "Ema", last: "Hodinová" });
+  });
+
+  test("po schválení 20 h dostane instruktor odměny 10 h a 20 h, správce je předá", async () => {
+    const before = await rpc<{ hours: number }>(db, ema, "my_milestones", []);
+    expect(Number(before.hours)).toBe(0);
+    for (let i = 0; i < 4; i++) {
+      const { occurrences: [occ] } = await createLesson(admin, { dates: [day(90 + i)], start: "08:00", end: "13:00" });
+      await rpc(db, admin, "assign_instructor", [occ, ema]);
+      await moveToPast(occ, 30 + 6 * i, 5);
+      await rpc(db, admin, "confirm_attendance", [occ, JSON.stringify([{ assignment_id: await assignmentOf(occ, ema) }])]);
+    }
+    const m = await rpc<{ hours: number; milestones: { hours: number; reached_at: string | null; title: string }[] }>(db, ema, "my_milestones", []);
+    expect(Number(m.hours)).toBe(20);
+    const reached = m.milestones.filter((x) => x.reached_at).map((x) => Number(x.hours));
+    expect(reached).toEqual([10, 20]);
+    const notes = await asUser<{ title: string }>(db, ema, "select title from public.notifications where type = 'milestone' order by created_at");
+    expect(notes).toHaveLength(2);
+    expect(notes[1].title).toMatch(/20 h: Zimní čepice/);
+
+    const ov = await rpc<{ to_hand: { id: string; user_id: string }[] }>(db, coord, "milestone_overview", []);
+    const mine = ov.to_hand.filter((x) => x.user_id === ema);
+    expect(mine).toHaveLength(2);
+    await expect(rpc(db, coord, "hand_over_milestone", [mine[0].id, true])).rejects.toThrow();
+    await rpc(db, admin, "hand_over_milestone", [mine[0].id, true]);
+    const ov2 = await rpc<{ to_hand: { user_id: string }[] }>(db, admin, "milestone_overview", []);
+    expect(ov2.to_hand.filter((x) => x.user_id === ema)).toHaveLength(1);
+    // ostatní instruktoři cizí odměny nevidí
+    expect(await asUser(db, petr, "select * from public.milestone_awards where user_id = $1", [ema])).toHaveLength(0);
   });
 });

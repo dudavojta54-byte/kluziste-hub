@@ -10,7 +10,7 @@ import { useUser } from "@/components/providers";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { durationHours, fmtDateShort, fmtMoney, fmtNum, fmtTimeRange, fullName } from "@/lib/format";
-import { useProfilesById } from "@/lib/queries";
+import { rateOf, useCreditValue, useProfilesById } from "@/lib/queries";
 import { getSupabase } from "@/lib/supabase/client";
 
 interface PendingRow {
@@ -20,7 +20,7 @@ interface PendingRow {
   user_id: string;
   hours: number;
   note: string | null;
-  occurrence: { title: string; starts_at: string; ends_at: string; lesson_type: { name: string; color: string; hourly_rate: number } };
+  occurrence: { title: string; starts_at: string; ends_at: string; credit_multiplier: number; lesson_type: { name: string; color: string } };
 }
 
 /** Vykázaný čas instruktorů čekající na schválení správcem */
@@ -29,12 +29,13 @@ export function PendingReports() {
   const qc = useQueryClient();
   const { map } = useProfilesById();
   const [busy, setBusy] = useState<string | null>(null);
+  const creditValue = useCreditValue();
   const q = useQuery({
     queryKey: ["work_reports", "pending_full"],
     enabled: user.isAdmin,
     queryFn: async () => {
       const { data, error } = await getSupabase().from("work_reports")
-        .select("id, assignment_id, occurrence_id, user_id, hours, note, occurrence:lesson_occurrences(title, starts_at, ends_at, lesson_type:lesson_types(name, color, hourly_rate))")
+        .select("id, assignment_id, occurrence_id, user_id, hours, note, occurrence:lesson_occurrences(title, starts_at, ends_at, credit_multiplier, lesson_type:lesson_types(name, color))")
         .eq("status", "submitted").order("created_at");
       if (error) throw new Error(error.message);
       return data as unknown as PendingRow[];
@@ -88,7 +89,7 @@ export function PendingReports() {
                 <div className="text-right text-sm tabular-nums">
                   <b className={differs ? "text-warning" : ""}>{fmtNum(r.hours)} h</b>
                   {differs && <span className="text-xs text-muted-foreground"> (plán {fmtNum(planned)} h)</span>}
-                  <div className="text-xs text-muted-foreground">{fmtMoney(Number(r.hours) * Number(r.occurrence.lesson_type.hourly_rate))}</div>
+                  <div className="text-xs text-muted-foreground">{fmtMoney(Number(r.hours) * rateOf(r.occurrence.credit_multiplier, creditValue))}</div>
                 </div>
                 <Button size="sm" variant="outline" disabled={!!busy} onClick={() => approve([r])}>
                   {busy === r.id ? <Spinner /> : <Check />} Schválit

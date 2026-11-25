@@ -11,6 +11,9 @@ import type {
   Availability,
   Contact,
   DocumentRow,
+  HourMilestone,
+  MilestoneOverview,
+  MyMilestones,
   LessonType,
   Location,
   Notification,
@@ -48,6 +51,46 @@ export function useLessonTypes() {
     queryKey: ["lesson_types"],
     queryFn: () => unwrap<LessonType[]>(sb().from("lesson_types").select("*").order("sort_order")),
     staleTime: 5 * 60_000,
+  });
+}
+
+/** Hodnota jednoho kreditu v Kč (nastavuje správce) */
+export function useCreditValue() {
+  const q = useQuery({
+    queryKey: ["app_settings", "credit_value"],
+    queryFn: async () => {
+      const r = await unwrap<{ value: unknown } | null>(sb().from("app_settings").select("value").eq("key", "credit_value").maybeSingle());
+      return Number(r?.value ?? 200) || 200;
+    },
+    staleTime: 5 * 60_000,
+  });
+  return q.data ?? 200;
+}
+
+/** Sazba v Kč za hodinu = kredity za hodinu × hodnota kreditu */
+export const rateOf = (creditsPerHour: number | null | undefined, creditValue: number) =>
+  Math.round(Number(creditsPerHour ?? 1) * creditValue * 100) / 100;
+
+export function useHourMilestones() {
+  return useQuery({
+    queryKey: ["hour_milestones"],
+    queryFn: () => unwrap<HourMilestone[]>(sb().from("hour_milestones").select("*").order("hours")),
+    staleTime: 5 * 60_000,
+  });
+}
+
+export function useMyMilestones() {
+  return useQuery({
+    queryKey: ["milestones", "mine"],
+    queryFn: () => unwrap<MyMilestones>(sb().rpc("my_milestones")),
+  });
+}
+
+export function useMilestoneOverview(enabled = true) {
+  return useQuery({
+    queryKey: ["milestones", "overview"],
+    enabled,
+    queryFn: () => unwrap<MilestoneOverview>(sb().rpc("milestone_overview")),
   });
 }
 
@@ -297,7 +340,7 @@ export function useRpc<TArgs extends Record<string, unknown>, TResult = unknown>
 
 const DEFAULT_INVALIDATE: QueryKey[] = [
   ["occurrences"], ["applications"], ["dashboard"], ["suggestions"], ["statement"], ["team_overview"],
-  ["work_reports"], ["credit_history"],
+  ["work_reports"], ["credit_history"], ["milestones"],
 ];
 
 /** Přímý zápis do tabulky (chráněno RLS) */

@@ -8,7 +8,7 @@ export default function OfflinePage() {
       <WifiOff className="size-10 text-muted-foreground" />
       <h1 className="text-xl font-bold">Jste offline</h1>
       <p className="max-w-xs text-sm text-muted-foreground">
-        Rozvrh a přihlášky vyžadují připojení, aby byly vždy aktuální. Zkuste to znovu, až budete online.
+        Rozvrh a přihlášky vyžadují připojení, aby byly vždy aktuální. Zkus to znovu, až budeš online.
       </p>
     </div>
   );

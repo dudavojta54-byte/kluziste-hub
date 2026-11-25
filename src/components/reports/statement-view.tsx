@@ -17,10 +17,10 @@ export function StatementView({ userId, period }: { userId: string; period: stri
 
   const model = s.model ?? "program";
   const formula =
-    model === "program" ? "odučené hodiny × sazba programu"
+    model === "program" ? `hodiny × kredity programu × ${fmtMoney(s.credit_value ?? 200)}`
     : model === "hourly" ? `${fmtNum(s.hours)} h × ${fmtMoney(s.hourly_rate)}`
     : model === "fixed" ? "fixní měsíční částka"
-    : `${fmtNum(s.total_credits)} kr × ${fmtMoney(s.credit_rate)}`;
+    : `${fmtNum(s.total_credits)} kreditů × ${fmtMoney(s.credit_rate)}`;
 
   return (
     <div className="space-y-5">

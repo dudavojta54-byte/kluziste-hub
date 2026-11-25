@@ -27,7 +27,7 @@ export default function AvailabilityPage() {
   const [tab, setTab] = useState<"mine" | "team">("mine");
   return (
     <>
-      <PageHeader title="Dostupnost" description="Do středy nahlas, kdy můžeš příští týden pracovat – podle toho dostaneš nabídky lekcí." />
+      <PageHeader title="Dostupnost" description="Do středy nahlaš, kdy můžeš příští týden pracovat. Podle toho dostaneš nabídky lekcí." />
       {user.isStaff && (
         <div className="mb-4 flex w-fit rounded-lg bg-muted p-0.5">
           {([["mine", "Moje dostupnost"], ["team", "Dostupnost týmu"]] as const).map(([k, l]) => (
@@ -72,7 +72,7 @@ function MyAvailability() {
           <h2 className="font-semibold">Konkrétní dny</h2>
           <MonthPicker value={month} onChange={setMonth} />
         </div>
-        <p className="text-xs text-muted-foreground">Klepnutím na den přepínáte: mohu → preferuji → nemohu → nevyplněno.</p>
+        <p className="text-xs text-muted-foreground">Klepnutím na den přepínáš: mohu → preferuji → nemohu → nevyplněno.</p>
         <div className="grid grid-cols-7 gap-1 text-center text-xs font-medium text-muted-foreground">
           {WEEKDAYS_SHORT.map((d) => <div key={d}>{d}</div>)}
         </div>

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useMemo } from "react";
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { EmptyState, LoadingList, PageHeader, SectionTitle, StatCard, ToneBadge, TypeDot } from "@/components/common";
+import { MilestoneProgress } from "@/components/instructor/milestones";
 import { AvailabilityReminder, LessonsToReport, OwnClientDialog } from "@/components/instructor/work";
 import { OccurrenceCard, occurrenceRelation, useMyApplicationMap } from "@/components/lessons/occurrence-card";
 import { useUser } from "@/components/providers";
@@ -87,7 +88,7 @@ export function InstructorDashboard() {
               Moje nejbližší lekce
             </SectionTitle>
             {upcoming.isLoading ? <LoadingList /> : mine.length === 0 ? (
-              <EmptyState icon={CalendarClock} title="Zatím nemáte žádné naplánované lekce">Přihlaste se na volnou lekci níže.</EmptyState>
+              <EmptyState icon={CalendarClock} title="Zatím nemáš žádné naplánované lekce">Přihlas se na volnou lekci níže.</EmptyState>
             ) : (
               <div className="space-y-2.5">{mine.slice(0, 5).map((o) => <OccurrenceCard key={o.id} occ={o} app={apps.get(o.id)} />)}</div>
             )}
@@ -98,7 +99,7 @@ export function InstructorDashboard() {
               Volné lekce
             </SectionTitle>
             {upcoming.isLoading ? <LoadingList /> : open.length === 0 ? (
-              <EmptyState icon={Ticket} title="Momentálně nejsou volné lekce">O nových lekcích vás upozorníme.</EmptyState>
+              <EmptyState icon={Ticket} title="Momentálně nejsou volné lekce">O nových lekcích tě upozorníme.</EmptyState>
             ) : (
               <div className="space-y-2.5">{open.slice(0, 6).map((o) => <OccurrenceCard key={o.id} occ={o} app={apps.get(o.id)} />)}</div>
             )}
@@ -106,6 +107,8 @@ export function InstructorDashboard() {
         </div>
 
         <div className="space-y-6 lg:col-span-2">
+          <MilestoneProgress />
+
           <Card className="gap-3 p-4 sm:p-5">
             <SectionTitle action={<Link href="/vykazy" className="text-sm text-primary hover:underline">Výkaz</Link>}>
               {fmtMonth(period)}
@@ -153,7 +156,7 @@ export function InstructorDashboard() {
 
           <Link href="/pravidla" className="flex items-center gap-3 rounded-xl border bg-card p-4 hover:border-primary/40">
             <Compass className="size-5 text-primary" />
-            <div className="text-sm"><b>Jak funguje náš tým</b><div className="text-muted-foreground">Sazby, týdenní rytmus, individuální lekce</div></div>
+            <div className="text-sm"><b>Jak funguje náš tým</b><div className="text-muted-foreground">Odměny, týdenní rytmus, individuální lekce</div></div>
           </Link>
         </div>
       </div>

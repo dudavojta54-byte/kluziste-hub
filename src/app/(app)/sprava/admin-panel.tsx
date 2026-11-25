@@ -4,7 +4,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Copy, KeyRound, Link2, MailPlus, Plus, RotateCcw, Save, Trash2, UserCheck, UserX } from "lucide-react";
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
-import { Field, LoadingList, NativeSelect, PageHeader, Spinner, ToneBadge, TypeDot, UserAvatar } from "@/components/common";
+import { Field, LoadingList, NativeSelect, PageHeader, SectionTitle, Spinner, ToneBadge, TypeDot, UserAvatar } from "@/components/common";
 import { useUser } from "@/components/providers";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -13,8 +13,8 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { CONTACT_CATEGORY, ROLE_LABELS, TIER } from "@/lib/constants";
-import { fmtDateTime, fullName } from "@/lib/format";
-import { useContacts, useLessonTypes, useLocations, useRpc, useTableMutation, useTeam } from "@/lib/queries";
+import { fmtDateTime, fmtMoney, fmtNum, fullName } from "@/lib/format";
+import { rateOf, useContacts, useCreditValue, useHourMilestones, useLessonTypes, useLocations, useRpc, useTableMutation, useTeam } from "@/lib/queries";
 import { getSupabase } from "@/lib/supabase/client";
 import type { AppRole, Contact, ContactCategory, Tier } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -24,7 +24,7 @@ import {
 } from "./actions";
 
 const TABS = [
-  ["users", "Uživatelé"], ["locations", "Lokality"], ["types", "Programy a sazby"],
+  ["users", "Uživatelé"], ["locations", "Lokality"], ["types", "Programy a odměny"],
   ["contacts", "Kontakty"], ["settings", "Nastavení"], ["audit", "Audit"],
 ] as const;
 
@@ -32,7 +32,7 @@ export function AdminPanel() {
   const [tab, setTab] = useState<(typeof TABS)[number][0]>("users");
   return (
     <>
-      <PageHeader title="Správa" description="Uživatelé, kluziště, sazby programů, kontakty a auditní stopa" />
+      <PageHeader title="Správa" description="Uživatelé, kluziště, programy a odměny, kontakty a auditní stopa" />
       <div className="mb-5 flex gap-1 overflow-x-auto rounded-lg bg-muted p-0.5">
         {TABS.map(([k, l]) => (
           <button key={k} onClick={() => setTab(k)}
@@ -245,39 +245,109 @@ function Locations() {
 
 function LessonTypes() {
   const types = useLessonTypes();
-  const [edits, setEdits] = useState<Record<string, { rate: string; color: string; active: boolean }>>({});
-  const save = useTableMutation<{ id: string; hourly_rate: number; color: string; is_active: boolean }>(
-    (sb, v) => sb.from("lesson_types").update({ hourly_rate: v.hourly_rate, color: v.color, is_active: v.is_active }).eq("id", v.id),
+  const creditValue = useCreditValue();
+  const [cv, setCv] = useState<string | null>(null);
+  const setValue = useRpc<{ p_value: number }>("set_credit_value", {
+    invalidate: [["app_settings"], ["lesson_types"], ["occurrences"]], success: "Hodnota kreditu uložena.",
+  });
+  const [edits, setEdits] = useState<Record<string, { credits: string; color: string; active: boolean }>>({});
+  const save = useTableMutation<{ id: string; credit_multiplier: number; color: string; is_active: boolean }>(
+    (sb, v) => sb.from("lesson_types").update({ credit_multiplier: v.credit_multiplier, color: v.color, is_active: v.is_active }).eq("id", v.id),
     { invalidate: [["lesson_types"], ["occurrences"]], success: "Uloženo." },
   );
+  const cvNum = Number((cv ?? String(creditValue)).replace(",", "."));
+  return (
+    <div className="space-y-5">
+      <Card className="gap-3 p-4 sm:p-5">
+        <SectionTitle>Hodnota kreditu</SectionTitle>
+        <p className="text-sm text-muted-foreground">
+          Každý program má určený počet kreditů za hodinu. Instruktoři kredity nevidí – aplikace jim je ukazuje rovnou v Kč:
+          odměna = odučené hodiny × kredity programu × hodnota kreditu.
+        </p>
+        <div className="flex flex-wrap items-end gap-2">
+          <Field label="1 kredit (Kč)">
+            <Input inputMode="decimal" className="w-32" value={cv ?? String(creditValue)} onChange={(e) => setCv(e.target.value)} />
+          </Field>
+          <Button variant="outline" disabled={cv === null || !(cvNum > 0) || setValue.isPending}
+            onClick={() => setValue.mutateAsync({ p_value: cvNum }).then(() => setCv(null)).catch(() => {})}>
+            {setValue.isPending ? <Spinner /> : <Save />} Uložit
+          </Button>
+        </div>
+        <p className="text-xs text-muted-foreground">Změna platí pro nově schválené hodiny. Už schválené hodiny si ponechávají původní částku.</p>
+      </Card>
+      <Card className="gap-3 p-4 sm:p-5">
+        <SectionTitle>Programy</SectionTitle>
+        <ul className="divide-y">
+          {types.data?.map((t) => {
+            const e = edits[t.id] ?? { credits: String(t.credit_multiplier ?? 1).replace(".", ","), color: t.color, active: t.is_active };
+            const set = (patch: Partial<typeof e>) => setEdits({ ...edits, [t.id]: { ...e, ...patch } });
+            const credits = Number(e.credits.replace(",", "."));
+            return (
+              <li key={t.id} className="grid gap-2 py-3 sm:grid-cols-[1fr_210px_70px_100px_auto] sm:items-center">
+                <span className="flex items-center gap-2 font-medium"><TypeDot color={e.color} className="size-3" />{t.name}</span>
+                <div className="flex items-center gap-1.5">
+                  <Input inputMode="decimal" className="w-20" value={e.credits} onChange={(x) => set({ credits: x.target.value })} aria-label="Kredity za hodinu" />
+                  <span className="whitespace-nowrap text-xs text-muted-foreground">kr./h = <b className="text-foreground">{fmtMoney(rateOf(credits || 0, creditValue))}</b>/h</span>
+                </div>
+                <Input type="color" value={e.color} onChange={(x) => set({ color: x.target.value })} className="p-1" aria-label="Barva" />
+                <label className="flex items-center gap-2 text-sm"><Checkbox checked={e.active} onCheckedChange={(c) => set({ active: Boolean(c) })} /> Aktivní</label>
+                <Button size="sm" variant="outline" disabled={!edits[t.id] || !(credits >= 0 && credits <= 10)}
+                  onClick={() => save.mutate({ id: t.id, credit_multiplier: credits, color: e.color, is_active: e.active })}>
+                  <Save /> Uložit
+                </Button>
+              </li>
+            );
+          })}
+        </ul>
+      </Card>
+      <Milestones />
+    </div>
+  );
+}
+
+function Milestones() {
+  const list = useHourMilestones();
+  const empty = { hours: "", icon: "🎁", title: "", description: "" };
+  const [f, setF] = useState(empty);
+  const add = useTableMutation<typeof f>(
+    (sb, v) => sb.from("hour_milestones").insert({ hours: Number(v.hours.replace(",", ".")), icon: v.icon || "🎁", title: v.title.trim(), description: v.description.trim() || null }),
+    { invalidate: [["hour_milestones"], ["milestones"]], success: "Odměna přidána." },
+  );
+  const toggle = useTableMutation<{ id: string; is_active: boolean }>(
+    (sb, v) => sb.from("hour_milestones").update({ is_active: v.is_active }).eq("id", v.id),
+    { invalidate: [["hour_milestones"], ["milestones"]] },
+  );
+  const remove = useTableMutation<string>((sb, id) => sb.from("hour_milestones").delete().eq("id", id),
+    { invalidate: [["hour_milestones"], ["milestones"]], success: "Odměna smazána." });
+  const valid = Number(f.hours.replace(",", ".")) > 0 && f.title.trim().length >= 2;
   return (
     <Card className="gap-3 p-4 sm:p-5">
+      <SectionTitle>Odměny za odpracované hodiny</SectionTitle>
       <p className="text-sm text-muted-foreground">
-        Hodinová sazba instruktora pro každý program. Odměna = schválené hodiny × sazba. Změna platí pro nově schválené hodiny;
-        už schválené si ponechávají původní sazbu.
+        Počítají se schválené hodiny od začátku sezóny (1. září). Po dosažení hranice dostane instruktor oznámení
+        a odměna se vám objeví na přehledu k předání.
       </p>
       <ul className="divide-y">
-        {types.data?.map((t) => {
-          const e = edits[t.id] ?? { rate: String(t.hourly_rate), color: t.color, active: t.is_active };
-          const set = (patch: Partial<typeof e>) => setEdits({ ...edits, [t.id]: { ...e, ...patch } });
-          const rate = Number(e.rate.replace(",", "."));
-          return (
-            <li key={t.id} className="grid gap-2 py-3 sm:grid-cols-[1fr_150px_70px_100px_auto] sm:items-center">
-              <span className="flex items-center gap-2 font-medium"><TypeDot color={e.color} className="size-3" />{t.name}</span>
-              <div className="flex items-center gap-1.5">
-                <Input inputMode="decimal" value={e.rate} onChange={(x) => set({ rate: x.target.value })} aria-label="Sazba Kč za hodinu" />
-                <span className="whitespace-nowrap text-xs text-muted-foreground">Kč/h</span>
-              </div>
-              <Input type="color" value={e.color} onChange={(x) => set({ color: x.target.value })} className="p-1" aria-label="Barva" />
-              <label className="flex items-center gap-2 text-sm"><Checkbox checked={e.active} onCheckedChange={(c) => set({ active: Boolean(c) })} /> Aktivní</label>
-              <Button size="sm" variant="outline" disabled={!edits[t.id] || !(rate >= 0)}
-                onClick={() => save.mutate({ id: t.id, hourly_rate: rate, color: e.color, is_active: e.active })}>
-                <Save /> Uložit
-              </Button>
-            </li>
-          );
-        })}
+        {list.data?.map((m) => (
+          <li key={m.id} className="flex items-center gap-3 py-2.5 text-sm">
+            <span className="w-14 shrink-0 font-semibold tabular-nums">{fmtNum(m.hours)} h</span>
+            <span className="text-xl">{m.icon}</span>
+            <div className={cn("min-w-0 flex-1", !m.is_active && "opacity-50")}>
+              <div className="font-medium">{m.title}</div>
+              {m.description && <div className="text-xs text-muted-foreground">{m.description}</div>}
+            </div>
+            <label className="flex items-center gap-2 text-xs"><Checkbox checked={m.is_active} onCheckedChange={(c) => toggle.mutate({ id: m.id, is_active: Boolean(c) })} /> Aktivní</label>
+            <Button variant="ghost" size="icon-sm" aria-label="Smazat" onClick={() => confirm(`Smazat odměnu „${m.title}“? Smaže se i záznam o jejím předání.`) && remove.mutate(m.id)}><Trash2 /></Button>
+          </li>
+        ))}
       </ul>
+      <div className="grid gap-2 border-t pt-3 sm:grid-cols-[90px_70px_1fr_1.4fr_auto] sm:items-end">
+        <Field label="Hodin"><Input inputMode="decimal" value={f.hours} onChange={(e) => setF({ ...f, hours: e.target.value })} placeholder="120" /></Field>
+        <Field label="Ikona"><Input value={f.icon} onChange={(e) => setF({ ...f, icon: e.target.value })} /></Field>
+        <Field label="Odměna"><Input value={f.title} onChange={(e) => setF({ ...f, title: e.target.value })} placeholder="např. Lyžařské brýle" /></Field>
+        <Field label="Popis"><Input value={f.description} onChange={(e) => setF({ ...f, description: e.target.value })} /></Field>
+        <Button disabled={!valid || add.isPending} onClick={() => add.mutateAsync(f).then(() => setF(empty)).catch(() => {})}><Plus /> Přidat</Button>
+      </div>
     </Card>
   );
 }

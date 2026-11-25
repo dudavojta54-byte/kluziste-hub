@@ -149,7 +149,7 @@ function ProfileForm({ initial, initialPrivate }: { initial: Profile; initialPri
 
           <Card className="gap-4 p-4 sm:p-6">
             <SectionTitle>Soukromé údaje</SectionTitle>
-            <p className="-mt-3 text-xs text-muted-foreground">Vidíte je pouze vy a správce. Slouží pro vyúčtování.</p>
+            <p className="-mt-3 text-xs text-muted-foreground">Vidíš je jen ty a správce. Slouží pro vyúčtování.</p>
             <div className="grid gap-3 sm:grid-cols-2">
               <Field label="Osobní telefon"><Input type="tel" value={pp.personal_phone ?? ""} onChange={(e) => setPp({ ...pp, personal_phone: e.target.value })} /></Field>
               <Field label="Datum narození"><Input type="date" value={pp.birth_date ?? ""} onChange={(e) => setPp({ ...pp, birth_date: e.target.value })} /></Field>
@@ -167,7 +167,7 @@ function ProfileForm({ initial, initialPrivate }: { initial: Profile; initialPri
               E-mailová upozornění
               <Switch checked={p.notify_email ?? true} onCheckedChange={(c) => setP({ ...p, notify_email: c })} />
             </label>
-            <p className="text-xs text-muted-foreground">Upozornění v aplikaci dostáváte vždy. Nezapomeňte změnu uložit.</p>
+            <p className="text-xs text-muted-foreground">Upozornění v aplikaci dostáváš vždy. Nezapomeň změnu uložit.</p>
           </Card>
           <Card className="gap-3 p-4 sm:p-5">
             <SectionTitle>Zabezpečení</SectionTitle>

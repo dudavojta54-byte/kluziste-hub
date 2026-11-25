@@ -189,7 +189,7 @@ function RewardDialog({ userId, name }: { userId: string; name: string }) {
         <DialogHeader><DialogTitle>Odměňování – {name}</DialogTitle></DialogHeader>
         <div className="grid gap-3">
           <div className="grid gap-2">
-            {(Object.keys(REWARD_MODEL) as RewardModel[]).filter((m) => m !== "credit").map((m) => (
+            {(["program", "credit", "hourly", "fixed"] as RewardModel[]).map((m) => (
               <button key={m} type="button" onClick={() => setF({ ...f, model: m })}
                 className={cn("rounded-lg border p-3 text-left", f.model === m ? "border-primary bg-primary/8" : "hover:bg-muted")}>
                 <div className="text-sm font-medium">{REWARD_MODEL[m].label}</div>
@@ -197,7 +197,7 @@ function RewardDialog({ userId, name }: { userId: string; name: string }) {
               </button>
             ))}
           </div>
-          {f.model === "credit" && <Field label="Cena kreditu (Kč)"><Input inputMode="decimal" value={f.credit_rate} onChange={(e) => setF({ ...f, credit_rate: e.target.value })} /></Field>}
+          {f.model === "credit" && <Field label="Hodnota kreditu pro tohoto instruktora (Kč)"><Input inputMode="decimal" value={f.credit_rate} onChange={(e) => setF({ ...f, credit_rate: e.target.value })} /></Field>}
           {f.model === "hourly" && <Field label="Hodinová sazba (Kč)"><Input inputMode="decimal" value={f.hourly_rate} onChange={(e) => setF({ ...f, hourly_rate: e.target.value })} /></Field>}
           {f.model === "fixed" && <Field label="Fixní měsíční odměna (Kč)"><Input inputMode="decimal" value={f.fixed_amount} onChange={(e) => setF({ ...f, fixed_amount: e.target.value })} /></Field>}
           <Field label="Platí od"><Input type="date" value={f.valid_from} onChange={(e) => setF({ ...f, valid_from: e.target.value })} /></Field>
@@ -223,11 +223,11 @@ function RewardHistory({ userId }: { userId: string }) {
           <li key={r.id} className="flex flex-wrap items-center justify-between gap-2 py-2">
             <span>od <b>{fmtDate(`${r.valid_from}T12:00:00Z`)}</b> · {REWARD_MODEL[r.model].label}</span>
             <span className="text-muted-foreground">
-              {r.model === "program" && "sazby programů"}
-              {r.model === "credit" && `${fmtMoney(r.credit_rate)} / kredit`}
+              {r.model === "program" && "kredity programů"}
+              {r.model === "credit" && `1 kredit = ${fmtMoney(r.credit_rate)}`}
               {r.model === "hourly" && `${fmtMoney(r.hourly_rate)} / hod`}
               {r.model === "fixed" && `${fmtMoney(r.fixed_amount)} / měsíc`}
-              {r.monthly_credit_target ? ` · cíl ${fmtNum(r.monthly_credit_target)} kr` : ""}
+              {r.monthly_credit_target ? ` · cíl ${fmtNum(r.monthly_credit_target)} kreditů` : ""}
             </span>
             {r.note && <ToneBadge tone="muted">{r.note}</ToneBadge>}
           </li>

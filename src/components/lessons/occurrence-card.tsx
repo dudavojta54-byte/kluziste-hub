@@ -41,7 +41,7 @@ export function ApplyButton({ occurrenceId, size = "default", className }: {
   className?: string;
 }) {
   const apply = useRpc<{ p_occurrence: string; p_note: string | null }, { status: string }>("apply_to_occurrence", {
-    success: (r) => (r.status === "waitlisted" ? "Lekce je obsazená – jste v seznamu náhradníků." : "Přihláška odeslána ke schválení."),
+    success: (r) => (r.status === "waitlisted" ? "Lekce je obsazená – jsi v seznamu náhradníků." : "Přihláška odeslána ke schválení."),
   });
   return (
     <Button

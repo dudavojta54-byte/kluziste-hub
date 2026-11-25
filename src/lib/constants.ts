@@ -38,7 +38,7 @@ export const OCCURRENCE_STATUS: Record<OccurrenceStatus, { label: string; tone: 
 export const ATTENDANCE_STATUS: Record<AttendanceStatus, string> = {
   present: "Celá účast",
   partial: "Částečná účast",
-  absent: "Nepřítomen",
+  absent: "Nepřítomnost",
 };
 
 export const AVAILABILITY_KIND: Record<AvailabilityKind, { label: string; tone: Tone }> = {
@@ -48,10 +48,10 @@ export const AVAILABILITY_KIND: Record<AvailabilityKind, { label: string; tone: 
 };
 
 export const REWARD_MODEL: Record<RewardModel, { label: string; description: string }> = {
-  program: { label: "Podle sazeb programů", description: "Odučené hodiny × sazba programu (výchozí pro všechny)" },
+  program: { label: "Podle kreditů programů", description: "Odučené hodiny × kredity programu × hodnota kreditu (výchozí pro všechny)" },
   hourly: { label: "Vlastní hodinová sazba", description: "Všechny hodiny × individuální sazba (výjimka)" },
   fixed: { label: "Fixní měsíční částka", description: "Smluvená částka nezávislá na hodinách (výjimka)" },
-  credit: { label: "Kreditová (původní)", description: "Kredity × cena kreditu – jen pro starší dohody" },
+  credit: { label: "Vlastní hodnota kreditu", description: "Kredity × individuální hodnota kreditu (výjimka)" },
 };
 
 export const BONUS_REASON: Record<BonusReason, string> = {

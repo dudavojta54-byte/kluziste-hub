@@ -22,7 +22,7 @@ export default function AnnouncementsPage() {
 
   return (
     <>
-      <PageHeader title="Oznámení" description="Provozní oznámení týmu a vaše upozornění" />
+      <PageHeader title="Oznámení" description="Oznámení pro tým a tvoje upozornění" />
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="space-y-4 lg:col-span-2">
           <div className="flex w-fit gap-1 rounded-lg bg-muted p-0.5">
@@ -88,7 +88,7 @@ function AnnouncementCard({ a }: { a: AnnouncementWithReceipt }) {
       <div className="flex flex-wrap items-center gap-3 border-t pt-3">
         {mine && a.important && (
           mine.acknowledged_at ? (
-            <span className="flex items-center gap-1.5 text-sm text-success"><CheckCircle2 className="size-4" /> Potvrdili jste přečtení</span>
+            <span className="flex items-center gap-1.5 text-sm text-success"><CheckCircle2 className="size-4" /> Přečtení potvrzeno</span>
           ) : (
             <Button size="sm" onClick={() => mark.mutate({ p_id: a.id, p_acknowledge: true })} disabled={mark.isPending}>
               <CheckCircle2 /> Potvrdit přečtení

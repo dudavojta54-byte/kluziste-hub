@@ -14,8 +14,8 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { WEEKDAYS_SHORT } from "@/lib/constants";
 import { addDays, generateSeriesDates, isoWeekday, pragueDate, pragueTime, todayPrague } from "@/lib/dates";
-import { fmtDate } from "@/lib/format";
-import { useLessonTypes, useLocations, useOccurrence, useRpc } from "@/lib/queries";
+import { fmtDate, fmtMoney } from "@/lib/format";
+import { rateOf, useCreditValue, useLessonTypes, useLocations, useOccurrence, useRpc } from "@/lib/queries";
 import { lessonFormSchema, parseBulkDates, type LessonFormOutput, type LessonFormValues } from "@/lib/validation";
 import { getSupabase } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
@@ -74,6 +74,9 @@ export function LessonForm({ copyFrom }: { copyFrom?: string }) {
 
   const v = useWatch({ control: form.control });
   const selectedType = types.data?.find((t) => t.id === v.lesson_type_id);
+  const creditValue = useCreditValue();
+  const typed = Number(String(v.credit_multiplier ?? "").replace(",", "."));
+  const lessonCredits = v.credit_multiplier !== "" && v.credit_multiplier != null && typed >= 0 ? typed : selectedType?.credit_multiplier;
 
   const dates = useMemo(() => {
     if (v.repeat === "weekly" && v.date && v.repeat_until) {
@@ -157,12 +160,10 @@ export function LessonForm({ copyFrom }: { copyFrom?: string }) {
             <Field label="Potřebný počet instruktorů" error={err.required_instructors?.message}>
               <Input type="number" min={1} max={50} {...form.register("required_instructors")} />
             </Field>
-            <div className="flex flex-col justify-end gap-1.5">
-              <span className="text-sm font-medium">Odměna instruktora</span>
-              <div className="flex h-9 items-center rounded-lg border bg-muted/40 px-2.5 text-sm">
-                {selectedType ? `${new Intl.NumberFormat("cs-CZ").format(Number(selectedType.hourly_rate))} Kč / hod · sazba programu` : "Podle zvoleného programu"}
-              </div>
-            </div>
+            <Field label="Kredity za hodinu" error={err.credit_multiplier?.message}
+              hint={selectedType ? `Prázdné = podle programu. Odměna instruktora ${fmtMoney(rateOf(lessonCredits, creditValue))} / hod.` : "Prázdné = podle programu."}>
+              <Input inputMode="decimal" placeholder={selectedType ? String(selectedType.credit_multiplier ?? 1).replace(".", ",") : "podle programu"} {...form.register("credit_multiplier")} />
+            </Field>
           </div>
         </Card>
 

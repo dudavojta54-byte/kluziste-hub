@@ -2,13 +2,13 @@
 
 import { CalendarCheck, ClipboardCheck, Handshake, Inbox, MapPin, Users } from "lucide-react";
 import Link from "next/link";
-import { PageHeader } from "@/components/common";
+import { PageHeader, TypeDot } from "@/components/common";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { TIER } from "@/lib/constants";
-import { fmtMoney } from "@/lib/format";
-import { useLessonTypes, useLocations, useTeam } from "@/lib/queries";
+import { fmtMoney, fmtNum } from "@/lib/format";
+import { rateOf, useCreditValue, useHourMilestones, useLessonTypes, useLocations, useTeam } from "@/lib/queries";
 import type { Tier } from "@/lib/types";
 
 const STEPS = [
@@ -25,10 +25,14 @@ export default function RulesPage() {
 
   const instructors = (team.data ?? []).filter((p) => p.is_active && p.roles.includes("instructor"));
   const tierCount = (t: Tier) => instructors.filter((p) => p.tier === t).length;
-  const rate = (code: string, fallback: number) => Number(types.data?.find((t) => t.code === code)?.hourly_rate ?? fallback);
+  const creditValue = useCreditValue();
+  const milestones = useHourMilestones();
+  const rate = (code: string, fallback: number) => {
+    const t = types.data?.find((x) => x.code === code);
+    return t ? rateOf(t.credit_multiplier, creditValue) : fallback;
+  };
   const base = rate("skolicka", 400);
   const individual = rate("individual", 500);
-  const own = rate("individual_own", 600);
   const activeLocations = (locations.data ?? []).filter((l) => l.is_active).length;
   const programs = (types.data ?? []).filter((t) => t.is_active);
 
@@ -66,16 +70,24 @@ export default function RulesPage() {
           Rozdělení rolí je výchozí a může se měnit podle dostupnosti, spolehlivosti a poptávky.
         </p>
         <p className="mt-2 text-sm leading-relaxed">
-          <b>Programy:</b> {programs.map((p) => p.name).join(", ") || "školička bruslení (hlavně v lednu), školy a školky, animační programy, tematické eventy a individuální lekce"}.
+          <b>Programy:</b> {programs.map((p) => p.name).join(", ") || "školička bruslení, školy a školky, animační programy, speciální akce a individuální lekce"}.
         </p>
       </Section>
 
       <Section n="02" title="Odměny">
-        <div className="grid gap-3 sm:grid-cols-3">
-          <RateCard amount={base} title="Běžné programy" text="Školička, školy a školky, animace, eventy" />
-          <RateCard amount={individual} title="Individuální lekce" text="Klienta zajistí organizátor" />
-          <RateCard amount={own} title="Vlastní klient" text="Klienta získáš ty" />
-        </div>
+        <p className="mb-3 text-sm leading-relaxed">
+          Každý program má jinou hodnotu podle náročnosti. Odměna = <b>odučené hodiny × sazba programu</b>.
+        </p>
+        <Card className="gap-0 overflow-hidden p-0">
+          <ul className="divide-y">
+            {[...programs].sort((a, b) => Number(b.credit_multiplier ?? 1) - Number(a.credit_multiplier ?? 1)).map((t) => (
+              <li key={t.id} className="flex items-center justify-between gap-3 px-4 py-2.5 text-sm">
+                <span className="flex min-w-0 items-center gap-2"><TypeDot color={t.color} /><span className="truncate">{t.name}</span></span>
+                <b className="whitespace-nowrap tabular-nums">{fmtMoney(rateOf(t.credit_multiplier, creditValue))} / hod</b>
+              </li>
+            ))}
+          </ul>
+        </Card>
         <h3 className="mb-2 mt-6 font-semibold">Modelový měsíční výdělek</h3>
         <Card className="gap-0 overflow-hidden p-0">
           <Table>
@@ -100,7 +112,27 @@ export default function RulesPage() {
         </p>
       </Section>
 
-      <Section n="03" title="Od dostupnosti k lekci">
+      {(milestones.data ?? []).some((m) => m.is_active) && (
+        <Section n="03" title="Odměny za odpracované hodiny">
+          <p className="mb-3 text-sm leading-relaxed">
+            Za každou sezónu (od 1. září) sčítáme tvoje schválené hodiny. Po dosažení hranice ti přijde oznámení
+            a odměnu ti předáme. Svůj postup vidíš na <Link href="/" className="text-primary hover:underline">Přehledu</Link>.
+          </p>
+          <div className="grid gap-2 sm:grid-cols-2">
+            {milestones.data!.filter((m) => m.is_active).map((m) => (
+              <Card key={m.id} className="flex-row items-center gap-3 p-3">
+                <span className="text-3xl">{m.icon}</span>
+                <div className="min-w-0">
+                  <div className="text-sm font-semibold"><span className="text-primary">{fmtNum(m.hours)} h</span> · {m.title}</div>
+                  {m.description && <div className="text-xs text-muted-foreground">{m.description}</div>}
+                </div>
+              </Card>
+            ))}
+          </div>
+        </Section>
+      )}
+
+      <Section n={(milestones.data ?? []).some((m) => m.is_active) ? "04" : "03"} title="Od dostupnosti k lekci">
         <ol className="space-y-3">
           {STEPS.map((s, i) => (
             <li key={s.title}>
@@ -135,15 +167,5 @@ function Section({ n, title, children }: { n: string; title: string; children: R
       <h2 className="mb-4 text-xl font-bold sm:text-2xl"><span className="text-primary">{n} /</span> {title}</h2>
       {children}
     </section>
-  );
-}
-
-function RateCard({ amount, title, text }: { amount: number; title: string; text: string }) {
-  return (
-    <Card className="gap-1 p-4">
-      <div className="font-[family-name:var(--font-display)] text-3xl font-bold text-primary">{fmtMoney(amount)}</div>
-      <div className="font-semibold">{title}</div>
-      <div className="text-sm text-muted-foreground">{text} · za hodinu</div>
-    </Card>
   );
 }

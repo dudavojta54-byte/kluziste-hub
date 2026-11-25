@@ -202,6 +202,7 @@ export interface Statement {
   bonus_credits: number;
   total_credits: number;
   bonus_amount: number;
+  credit_value?: number;
   program_amount: number;
   model: RewardModel | null;
   credit_rate: number | null;
@@ -292,4 +293,25 @@ export interface WorkReport {
   note: string | null;
   status: "submitted" | "approved";
   created_at: string;
+}
+
+export interface HourMilestone {
+  id: string;
+  hours: number;
+  title: string;
+  description: string | null;
+  icon: string;
+  is_active: boolean;
+}
+
+export interface MyMilestones {
+  season: string;
+  hours: number;
+  milestones: (Pick<HourMilestone, "id" | "hours" | "title" | "description" | "icon"> & { reached_at: string | null; handed_at: string | null })[];
+}
+
+export interface MilestoneOverview {
+  season: string;
+  to_hand: { id: string; user_id: string; name: string; icon: string; title: string; hours: number; reached_at: string }[];
+  instructors: { user_id: string; name: string; hours: number }[];
 }

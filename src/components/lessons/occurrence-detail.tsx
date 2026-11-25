@@ -21,7 +21,7 @@ import { APPLICATION_STATUS, ATTENDANCE_STATUS, AVAILABILITY_KIND, OCCURRENCE_ST
 import { pragueDate, pragueTime } from "@/lib/dates";
 import { durationHours, fmtDateTime, fmtDayLong, fmtHours, fmtMoney, fmtNum, fmtTimeRange, fullName } from "@/lib/format";
 import {
-  useApplicationsFor, useLessonTypes, useLocations, useOccurrence, useProfilesById, useRpc, useSeriesCount, useSuggestions,
+  rateOf, useApplicationsFor, useCreditValue, useLessonTypes, useLocations, useOccurrence, useProfilesById, useRpc, useSeriesCount, useSuggestions,
   useWorkReports,
 } from "@/lib/queries";
 import { getSupabase } from "@/lib/supabase/client";
@@ -32,6 +32,7 @@ export function OccurrenceDetail({ id }: { id: string }) {
   const params = useSearchParams();
   const occ = useOccurrence(id);
   const apps = useApplicationsFor(id);
+  const creditValue = useCreditValue();
 
   if (occ.isLoading) return <LoadingList rows={4} />;
   if (!occ.data) return <EmptyState title="Lekce nebyla nalezena" />;
@@ -65,7 +66,7 @@ export function OccurrenceDetail({ id }: { id: string }) {
               <span className="flex items-center gap-2 capitalize"><CalendarClock className="size-4" />{fmtDayLong(o.starts_at)}, {fmtTimeRange(o.starts_at, o.ends_at)}</span>
               <span className="flex items-center gap-2"><MapPin className="size-4" />{o.location.name}</span>
               <span className="flex items-center gap-2"><Users className="size-4" />{rel.assigned.length} / {o.required_instructors} instruktorů</span>
-              <span className="flex items-center gap-2"><Wallet className="size-4" />{fmtMoney(o.lesson_type.hourly_rate)} / hod · {fmtMoney(durationHours(o.starts_at, o.ends_at) * o.lesson_type.hourly_rate)} za lekci</span>
+              <span className="flex items-center gap-2"><Wallet className="size-4" />{fmtMoney(rateOf(o.credit_multiplier, creditValue))} / hod · {fmtMoney(durationHours(o.starts_at, o.ends_at) * rateOf(o.credit_multiplier, creditValue))} za lekci</span>
             </div>
             {o.registration_deadline && o.status === "scheduled" && (
               <p className="text-xs text-muted-foreground">Uzávěrka přihlášek: {fmtDateTime(o.registration_deadline)}</p>
@@ -167,10 +168,10 @@ function MyActions({ o, myApp, canApply, isMine }: {
   const canWithdraw = ["pending", "waitlisted", "approved"].includes(myApp.status) && new Date(o.starts_at) > new Date();
   return (
     <div className="flex items-center gap-2">
-      <ToneBadge tone={isMine ? "success" : status.tone} className="py-1.5 text-sm">{isMine ? "Jste přiřazen(a)" : status.label}</ToneBadge>
+      <ToneBadge tone={isMine ? "success" : status.tone} className="py-1.5 text-sm">{isMine ? "Jsi přiřazen(a)" : status.label}</ToneBadge>
       {canWithdraw && (
         <Button variant="outline" disabled={withdraw.isPending}
-          onClick={() => confirm(myApp.status === "approved" ? "Opravdu se chcete z lekce odhlásit?" : "Zrušit přihlášku?") && withdraw.mutate({ p_id: myApp.id })}>
+          onClick={() => confirm(myApp.status === "approved" ? "Opravdu se chceš z lekce odhlásit?" : "Zrušit přihlášku?") && withdraw.mutate({ p_id: myApp.id })}>
           {withdraw.isPending ? <Spinner /> : <X />} {myApp.status === "approved" ? "Odhlásit se" : "Zrušit přihlášku"}
         </Button>
       )}
@@ -308,6 +309,7 @@ function EditDialog({ o }: { o: OccurrenceFull }) {
   const types = useLessonTypes();
   const locations = useLocations();
   const seriesCount = useSeriesCount(o.lesson_id);
+  const creditValue = useCreditValue();
   const update = useRpc<{ p_id: string; p: Record<string, unknown>; p_scope: string }, number>("update_occurrence", {
     success: (n) => (n > 1 ? `Upraveno ${n} termínů.` : "Lekce upravena."),
   });
@@ -319,6 +321,7 @@ function EditDialog({ o }: { o: OccurrenceFull }) {
     const p: Record<string, unknown> = {
       title: f.title, lesson_type_id: f.lesson_type_id, location_id: f.location_id,
       start_time: f.start_time, end_time: f.end_time, required_instructors: Number(f.required_instructors),
+      credit_multiplier: Number(f.credit_multiplier.replace(",", ".")) || 0,
       description: f.description, instructions: f.instructions,
       registration_status: f.registration_status, registration_deadline_hours: Number(f.deadline_hours),
     };
@@ -351,6 +354,9 @@ function EditDialog({ o }: { o: OccurrenceFull }) {
             <Field label="Konec"><Input type="time" value={f.end_time} onChange={set("end_time")} /></Field>
           </div>
           <Field label="Počet instruktorů"><Input type="number" min={1} value={f.required_instructors} onChange={set("required_instructors")} /></Field>
+          <Field label="Kredity za hodinu" hint={`= ${fmtMoney(rateOf(Number(f.credit_multiplier.replace(",", ".")) || 0, creditValue))} / hod pro instruktora`}>
+            <Input inputMode="decimal" value={f.credit_multiplier} onChange={set("credit_multiplier")} />
+          </Field>
           <Field label="Přihlašování">
             <NativeSelect value={f.registration_status} onChange={set("registration_status")}>
               <option value="open">Otevřené</option>
@@ -386,7 +392,7 @@ function initEdit(o: OccurrenceFull) {
   return {
     title: o.title, lesson_type_id: o.lesson_type_id, location_id: o.location_id,
     date: pragueDate(o.starts_at), start_time: pragueTime(o.starts_at), end_time: pragueTime(o.ends_at),
-    required_instructors: String(o.required_instructors), credit_multiplier: String(o.credit_multiplier),
+    required_instructors: String(o.required_instructors), credit_multiplier: String(o.credit_multiplier).replace(".", ","),
     description: o.description ?? "", instructions: o.instructions ?? "",
     registration_status: o.registration_status, deadline_hours: String(deadline),
   };
@@ -438,6 +444,7 @@ function AttendancePanel({ o }: { o: OccurrenceFull }) {
     },
   });
   const planned = durationHours(o.starts_at, o.ends_at);
+  const rate = rateOf(o.credit_multiplier, useCreditValue());
   const reports = useWorkReports({ occurrenceId: o.id });
   const reportOf = (assignmentId: string) => reports.data?.find((r) => r.assignment_id === assignmentId);
   const [entries, setEntries] = useState<Record<string, { status: AttendanceStatus; hours: string; note: string }>>({});
@@ -472,7 +479,7 @@ function AttendancePanel({ o }: { o: OccurrenceFull }) {
         <span className="flex items-center gap-2"><ClipboardCheck className="size-5 text-primary" /> Schválení odučeného času</span>
       </SectionTitle>
       <p className="-mt-2 text-sm text-muted-foreground">
-        Hodiny jsou předvyplněné z vykázání instruktora (jinak plán). Odměna = hodiny × {fmtMoney(o.lesson_type.hourly_rate)}. Opravy se ukládají s auditní stopou.
+        Hodiny jsou předvyplněné z vykázání instruktora (jinak plán). Odměna = hodiny × {fmtMoney(rate)}. Opravy se ukládají s auditní stopou.
       </p>
       {assigned.length === 0 ? (
         <p className="text-sm text-muted-foreground">Na lekci není nikdo přiřazen. Záskok přidáte přes doporučené instruktory nebo úpravu kapacity.</p>
@@ -498,7 +505,7 @@ function AttendancePanel({ o }: { o: OccurrenceFull }) {
                 <Input inputMode="decimal" value={r.status === "absent" ? "0" : r.hours} disabled={r.status === "absent"}
                   onChange={(e) => update(a.id, { hours: e.target.value, status: r.status === "present" && Number(e.target.value) < planned ? "partial" : r.status })}
                   aria-label="Hodiny" />
-                <div className="text-right text-sm tabular-nums"><b>{fmtMoney(hours * o.lesson_type.hourly_rate)}</b></div>
+                <div className="text-right text-sm tabular-nums"><b>{fmtMoney(hours * rate)}</b></div>
               </div>
             );
           })}

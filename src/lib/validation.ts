@@ -18,7 +18,10 @@ export const lessonFormSchema = z
     start_time: time,
     end_time: time,
     required_instructors: z.coerce.number().int().min(1, "Alespoň 1").max(50),
-    credit_multiplier: z.union([z.literal(""), z.coerce.number().min(0).max(10)]).optional(),
+    credit_multiplier: z.union([
+      z.literal(""),
+      z.preprocess((x) => (typeof x === "string" ? x.replace(",", ".") : x), z.coerce.number({ message: "Zadejte číslo, např. 2,5" }).min(0).max(10)),
+    ]).optional(),
     description: z.string().max(4000).optional(),
     instructions: z.string().max(4000).optional(),
     registration_status: z.enum(["open", "closed"]),

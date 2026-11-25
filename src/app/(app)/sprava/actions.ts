@@ -39,7 +39,7 @@ export async function inviteUser(input: unknown): Promise<Result> {
 
 function rateLimitMessage(msg: string) {
   return /rate limit/i.test(msg)
-    ? "Supabase dočasně omezil odesílání e-mailů. Použijte tlačítko „Vytvořit odkaz“ a pošlete odkaz sami."
+    ? "Odesílání e-mailů je dočasně omezené. Použijte tlačítko „Vytvořit odkaz“ a pošlete odkaz sami."
     : msg;
 }
 

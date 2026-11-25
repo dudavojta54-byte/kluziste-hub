@@ -14,6 +14,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { EmptyState, LoadingList, PageHeader, SectionTitle, StatCard, ToneBadge, TypeDot } from "@/components/common";
 import { PendingReports } from "@/components/dashboard/pending-reports";
+import { MilestonesToHand } from "@/components/instructor/milestones";
 import { TeamTable } from "@/components/dashboard/team-table";
 import { useUser } from "@/components/providers";
 import { Button } from "@/components/ui/button";
@@ -48,13 +49,13 @@ export function AdminDashboardView() {
       />
 
       <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
-        <StatCard accent label="Dnes lekcí" icon={ClipboardCheck} value={data?.today.length ?? "–"} />
+        <StatCard accent label="Lekce dnes" icon={ClipboardCheck} value={data?.today.length ?? "–"} />
         <StatCard label="Neobsazené" icon={AlertTriangle} value={data?.understaffed.length ?? "–"} hint="v příštích 14 dnech" />
         <StatCard label="Čekající přihlášky" icon={Inbox} value={data?.pending_applications ?? "–"} />
         <StatCard label="Aktivní instruktoři" icon={Users} value={data?.active_instructors ?? "–"} />
-        <StatCard label="Odučeno (měsíc)" icon={Clock} value={fmtHours(data?.month_hours)} hint="schválené hodiny" />
+        <StatCard label="Odučeno tento měsíc" icon={Clock} value={fmtHours(data?.month_hours)} hint="schválené hodiny" />
         {user.isAdmin && (
-          <StatCard label="Odměny (měsíc)" icon={Wallet} value={fmtMoney(data?.estimated_cost)} hint="ze schválených hodin" />
+          <StatCard label="Odměny tento měsíc" icon={Wallet} value={fmtMoney(data?.estimated_cost)} hint="ze schválených hodin" />
         )}
       </div>
 
@@ -74,6 +75,7 @@ export function AdminDashboardView() {
       )}
 
       <div className="mt-4"><PendingReports /></div>
+      <div className="mt-4"><MilestonesToHand /></div>
 
       {user.isAdmin && data && data.unconfirmed.length > 0 && (
         <Card className="mt-4 gap-2 p-4">

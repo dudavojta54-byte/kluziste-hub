@@ -59,7 +59,7 @@ describe("9. měsíční export CSV", () => {
     expect(csv.startsWith("﻿")).toBe(true);
     const lines = csv.trim().split("\r\n");
     expect(lines[0]).toBe("Instruktor;Způsob odměny;Hodiny;Dokončené lekce;Za lekce (Kč);Bonusy (Kč);Celkem (Kč)");
-    expect(lines[1]).toBe("Anna Nováková;Podle sazeb programů;3;2;950;500;1450");
+    expect(lines[1]).toBe("Anna Nováková;Podle kreditů programů;3;2;950;500;1450");
     expect(lines.at(-1)).toBe("Celkem;;5;4;1900;1000;2450");
   });
 

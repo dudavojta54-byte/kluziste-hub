@@ -12,7 +12,7 @@ import { Input } from "@/components/ui/input";
 import { AVAILABILITY_DEADLINE_WEEKDAY } from "@/lib/constants";
 import { addDays, isoWeekday, startOfWeek, todayPrague } from "@/lib/dates";
 import { durationHours, fmtDate, fmtDateShort, fmtMoney, fmtTimeRange, fmtWeekday } from "@/lib/format";
-import { useAvailability, useLessonTypes, useLocations, useMyLessonsToReport, useRpc, useWorkReports } from "@/lib/queries";
+import { rateOf, useAvailability, useCreditValue, useLessonTypes, useLocations, useMyLessonsToReport, useRpc, useWorkReports } from "@/lib/queries";
 import type { OccurrenceFull, WorkReport } from "@/lib/types";
 
 // ------------------------------------------------------------------ vykázání odučeného času
@@ -47,10 +47,10 @@ export function LessonsToReport() {
   const user = useUser();
   const lessons = useMyLessonsToReport(user.id);
   const reports = useWorkReports();
-  const types = useLessonTypes();
+  const creditValue = useCreditValue();
   const list = lessons.data ?? [];
   if (lessons.isLoading || list.length === 0) return null;
-  const rate = (o: OccurrenceFull) => Number(types.data?.find((t) => t.id === o.lesson_type_id)?.hourly_rate ?? 0);
+  const rate = (o: OccurrenceFull) => rateOf(o.credit_multiplier, creditValue);
 
   return (
     <Card className="gap-3 border-primary/40 bg-primary/5 p-4 sm:p-5">
@@ -83,7 +83,9 @@ export function OwnClientDialog({ trigger }: { trigger?: React.ReactNode }) {
   const [open, setOpen] = useState(false);
   const locations = useLocations();
   const types = useLessonTypes();
-  const rate = types.data?.find((t) => t.code === "individual_own")?.hourly_rate;
+  const creditValue = useCreditValue();
+  const own = types.data?.find((t) => t.code === "individual_own");
+  const rate = own ? rateOf(own.credit_multiplier, creditValue) : null;
   const [f, setF] = useState({ date: todayPrague(), start: "16:00", end: "17:00", location: "", note: "" });
   const create = useRpc<{ p_date: string; p_start: string; p_end: string; p_location: string; p_note: string | null }>("create_own_lesson", {
     success: "Lekce zapsána do tvého rozvrhu. Po jejím skončení ji vykážeš.",
@@ -97,7 +99,7 @@ export function OwnClientDialog({ trigger }: { trigger?: React.ReactNode }) {
       <DialogContent className="sm:max-w-md">
         <DialogHeader><DialogTitle>Individuální lekce s vlastním klientem</DialogTitle></DialogHeader>
         <p className="text-sm text-muted-foreground">
-          Klienta jsi získal(a) sám/sama – sazba {rate ? fmtMoney(rate) : "600 Kč"} za hodinu. Lekce se ti zapíše do rozvrhu a správce dostane upozornění.
+          Klienta jsi získal(a) sám/sama. Odměna {rate ? `${fmtMoney(rate)} za hodinu` : "podle programu"}. Lekce se ti zapíše do rozvrhu a správce dostane upozornění.
         </p>
         <div className="grid gap-3">
           <Field label="Datum"><Input type="date" value={f.date} onChange={(e) => setF({ ...f, date: e.target.value })} /></Field>
@@ -146,7 +148,7 @@ export function AvailabilityReminder() {
       <CalendarClock className={`size-5 ${late ? "text-destructive" : "text-warning"}`} />
       <div className="min-w-0 flex-1 text-sm">
         <b>Nahlas dostupnost na příští týden</b> ({fmtDate(`${from}T12:00:00Z`)} – {fmtDate(`${to}T12:00:00Z`)}).{" "}
-        {late ? "Termín byl ve středu – vyplň ji co nejdřív." : `Termín: středa ${fmtDate(`${deadline}T12:00:00Z`)}.`}
+        {late ? "Termín byl ve středu – vyplň dostupnost co nejdřív." : `Termín: středa ${fmtDate(`${deadline}T12:00:00Z`)}.`}
       </div>
       <Button size="sm" render={<Link href="/dostupnost" />}>Vyplnit</Button>
     </Card>
