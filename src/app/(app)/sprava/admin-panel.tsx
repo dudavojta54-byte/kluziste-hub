@@ -12,11 +12,11 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { CONTACT_CATEGORY, ROLE_LABELS } from "@/lib/constants";
+import { CONTACT_CATEGORY, ROLE_LABELS, TIER } from "@/lib/constants";
 import { fmtDateTime, fullName } from "@/lib/format";
 import { useContacts, useLessonTypes, useLocations, useRpc, useTableMutation, useTeam } from "@/lib/queries";
 import { getSupabase } from "@/lib/supabase/client";
-import type { AppRole, Contact, ContactCategory } from "@/lib/types";
+import type { AppRole, Contact, ContactCategory, Tier } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
@@ -24,7 +24,7 @@ import {
 } from "./actions";
 
 const TABS = [
-  ["users", "Uživatelé"], ["locations", "Lokality"], ["types", "Programy a kredity"],
+  ["users", "Uživatelé"], ["locations", "Lokality"], ["types", "Programy a sazby"],
   ["contacts", "Kontakty"], ["settings", "Nastavení"], ["audit", "Audit"],
 ] as const;
 
@@ -32,7 +32,7 @@ export function AdminPanel() {
   const [tab, setTab] = useState<(typeof TABS)[number][0]>("users");
   return (
     <>
-      <PageHeader title="Správa" description="Uživatelé, číselníky, parametry kreditového systému a auditní stopa" />
+      <PageHeader title="Správa" description="Uživatelé, kluziště, sazby programů, kontakty a auditní stopa" />
       <div className="mb-5 flex gap-1 overflow-x-auto rounded-lg bg-muted p-0.5">
         {TABS.map(([k, l]) => (
           <button key={k} onClick={() => setTab(k)}
@@ -58,6 +58,10 @@ function Users() {
   const [pending, start] = useTransition();
   const [f, setF] = useState({ email: "", first_name: "", last_name: "", role: "instructor" as AppRole });
   const setRoles = useRpc<{ p_user: string; p_roles: AppRole[] }>("set_user_roles", { invalidate: [["team"]], success: "Role upraveny." });
+  const setTier = useTableMutation<{ id: string; tier: Tier }>(
+    (sb, v) => sb.from("profiles").update({ tier: v.tier }).eq("id", v.id),
+    { invalidate: [["team"], ["suggestions"]], success: "Úroveň uložena." },
+  );
 
   const run = (fn: () => Promise<{ ok: boolean; message?: string; error?: string }>) =>
     start(async () => {
@@ -133,7 +137,7 @@ function Users() {
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
-                <TableRow><TableHead>Uživatel</TableHead><TableHead>Role</TableHead><TableHead>Poslední přihlášení</TableHead><TableHead>Stav</TableHead><TableHead /></TableRow>
+                <TableRow><TableHead>Uživatel</TableHead><TableHead>Úroveň</TableHead><TableHead>Role</TableHead><TableHead>Poslední přihlášení</TableHead><TableHead>Stav</TableHead><TableHead /></TableRow>
               </TableHeader>
               <TableBody>
                 {(team.data ?? []).map((p) => {
@@ -150,6 +154,14 @@ function Users() {
                           <UserAvatar profile={p} />
                           <div><div className="font-medium">{fullName(p)}</div><div className="text-xs text-muted-foreground">{info?.email ?? "…"}</div></div>
                         </div>
+                      </TableCell>
+                      <TableCell>
+                        {roles.includes("instructor") ? (
+                          <NativeSelect value={p.tier} className="h-8 w-32 text-xs" disabled={setTier.isPending}
+                            onChange={(e) => setTier.mutate({ id: p.id, tier: e.target.value as Tier })}>
+                            {(Object.keys(TIER) as Tier[]).map((t) => <option key={t} value={t}>{TIER[t].label}</option>)}
+                          </NativeSelect>
+                        ) : <span className="text-xs text-muted-foreground">—</span>}
                       </TableCell>
                       <TableCell>
                         <div className="flex flex-wrap gap-2">
@@ -233,29 +245,33 @@ function Locations() {
 
 function LessonTypes() {
   const types = useLessonTypes();
-  const [edits, setEdits] = useState<Record<string, { mult: string; color: string; active: boolean }>>({});
-  const save = useTableMutation<{ id: string; credit_multiplier: number | null; color: string; is_active: boolean }>(
-    (sb, v) => sb.from("lesson_types").update({ credit_multiplier: v.credit_multiplier, color: v.color, is_active: v.is_active }).eq("id", v.id),
+  const [edits, setEdits] = useState<Record<string, { rate: string; color: string; active: boolean }>>({});
+  const save = useTableMutation<{ id: string; hourly_rate: number; color: string; is_active: boolean }>(
+    (sb, v) => sb.from("lesson_types").update({ hourly_rate: v.hourly_rate, color: v.color, is_active: v.is_active }).eq("id", v.id),
     { invalidate: [["lesson_types"], ["occurrences"]], success: "Uloženo." },
   );
   return (
     <Card className="gap-3 p-4 sm:p-5">
       <p className="text-sm text-muted-foreground">
-        Výchozí počet kreditů za 1 skutečnou hodinu. Změna se projeví u nově vytvořených lekcí; existující termíny si ponechávají svůj násobek.
-        Prázdný násobek = nastavitelný u každé akce.
+        Hodinová sazba instruktora pro každý program. Odměna = schválené hodiny × sazba. Změna platí pro nově schválené hodiny;
+        už schválené si ponechávají původní sazbu.
       </p>
       <ul className="divide-y">
         {types.data?.map((t) => {
-          const e = edits[t.id] ?? { mult: t.credit_multiplier == null ? "" : String(t.credit_multiplier), color: t.color, active: t.is_active };
+          const e = edits[t.id] ?? { rate: String(t.hourly_rate), color: t.color, active: t.is_active };
           const set = (patch: Partial<typeof e>) => setEdits({ ...edits, [t.id]: { ...e, ...patch } });
+          const rate = Number(e.rate.replace(",", "."));
           return (
-            <li key={t.id} className="grid gap-2 py-3 sm:grid-cols-[1fr_120px_70px_100px_auto] sm:items-center">
+            <li key={t.id} className="grid gap-2 py-3 sm:grid-cols-[1fr_150px_70px_100px_auto] sm:items-center">
               <span className="flex items-center gap-2 font-medium"><TypeDot color={e.color} className="size-3" />{t.name}</span>
-              <Input inputMode="decimal" value={e.mult} placeholder="nastavitelné" onChange={(x) => set({ mult: x.target.value })} aria-label="Násobek" />
+              <div className="flex items-center gap-1.5">
+                <Input inputMode="decimal" value={e.rate} onChange={(x) => set({ rate: x.target.value })} aria-label="Sazba Kč za hodinu" />
+                <span className="whitespace-nowrap text-xs text-muted-foreground">Kč/h</span>
+              </div>
               <Input type="color" value={e.color} onChange={(x) => set({ color: x.target.value })} className="p-1" aria-label="Barva" />
               <label className="flex items-center gap-2 text-sm"><Checkbox checked={e.active} onCheckedChange={(c) => set({ active: Boolean(c) })} /> Aktivní</label>
-              <Button size="sm" variant="outline" disabled={!edits[t.id]}
-                onClick={() => save.mutate({ id: t.id, credit_multiplier: e.mult === "" ? null : Number(e.mult.replace(",", ".")), color: e.color, is_active: e.active })}>
+              <Button size="sm" variant="outline" disabled={!edits[t.id] || !(rate >= 0)}
+                onClick={() => save.mutate({ id: t.id, hourly_rate: rate, color: e.color, is_active: e.active })}>
                 <Save /> Uložit
               </Button>
             </li>

@@ -20,6 +20,7 @@ import type {
   Statement,
   Suggestion,
   TeamOverviewRow,
+  WorkReport,
 } from "./types";
 
 const sb = () => getSupabase();
@@ -31,7 +32,7 @@ async function unwrap<T>(p: PromiseLike<{ data: T | null; error: { message: stri
 }
 
 export const OCC_SELECT =
-  "*, lesson_type:lesson_types(id, code, name, color), location:locations(id, name, color), assignments:instructor_assignments(id, user_id, status)";
+  "*, lesson_type:lesson_types(id, code, name, color, hourly_rate), location:locations(id, name, color), assignments:instructor_assignments(id, user_id, status)";
 
 // ---------------------------------------------------------------- číselníky
 export function useLocations() {
@@ -175,7 +176,7 @@ export function useCreditHistory(months = 6) {
   return useQuery({
     queryKey: ["credit_history", months],
     queryFn: () =>
-      unwrap<{ period: string; lesson_credits: number; bonus_credits: number; hours: number }[]>(
+      unwrap<{ period: string; lesson_credits: number; bonus_credits: number; hours: number; amount: number }[]>(
         sb().rpc("my_credit_history", { p_months: months }),
       ),
   });
@@ -296,6 +297,7 @@ export function useRpc<TArgs extends Record<string, unknown>, TResult = unknown>
 
 const DEFAULT_INVALIDATE: QueryKey[] = [
   ["occurrences"], ["applications"], ["dashboard"], ["suggestions"], ["statement"], ["team_overview"],
+  ["work_reports"], ["credit_history"],
 ];
 
 /** Přímý zápis do tabulky (chráněno RLS) */
@@ -314,5 +316,35 @@ export function useTableMutation<T>(
       if (opts.success) toast.success(opts.success);
     },
     onError: (e: Error) => toast.error(e.message),
+  });
+}
+
+// ---------------------------------------------------------------- vykazování
+/** Vykázání odučeného času (instruktor vidí svá, staff všechna) */
+export function useWorkReports(opts: { status?: "submitted"; occurrenceId?: string } = {}) {
+  return useQuery({
+    queryKey: ["work_reports", opts.status ?? "all", opts.occurrenceId ?? "all"],
+    queryFn: () => {
+      let q = sb().from("work_reports").select("*").order("created_at");
+      if (opts.status) q = q.eq("status", opts.status);
+      if (opts.occurrenceId) q = q.eq("occurrence_id", opts.occurrenceId);
+      return unwrap<WorkReport[]>(q);
+    },
+  });
+}
+
+/** Moje proběhlé lekce bez schválené docházky (k vykázání) */
+export function useMyLessonsToReport(userId: string) {
+  return useQuery({
+    queryKey: ["occurrences", "to_report", userId],
+    queryFn: async () => {
+      const from = new Date(Date.now() - 45 * 86400_000).toISOString();
+      const occ = await unwrap<OccurrenceFull[]>(
+        sb().from("lesson_occurrences").select(OCC_SELECT)
+          .gte("starts_at", from).lte("starts_at", new Date().toISOString())
+          .eq("status", "scheduled").order("starts_at"),
+      );
+      return occ.filter((o) => o.assignments.some((a) => a.user_id === userId && a.status === "active"));
+    },
   });
 }

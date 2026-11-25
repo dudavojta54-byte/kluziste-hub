@@ -7,9 +7,10 @@ import { useUser } from "@/components/providers";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { AVAILABILITY_KIND, WEEKDAYS, WEEKDAYS_SHORT } from "@/lib/constants";
+import { AVAILABILITY_KIND, TIER, TIER_ORDER, WEEKDAYS, WEEKDAYS_SHORT } from "@/lib/constants";
+import { AvailabilityReminder, nextWeekRange } from "@/components/instructor/work";
 import { isoWeekday, monthGrid, startOfMonth, todayPrague } from "@/lib/dates";
-import { fmtDayLong, fullName } from "@/lib/format";
+import { fmtDate, fmtDayLong, fullName } from "@/lib/format";
 import { useAvailability, useTableMutation, useTeam } from "@/lib/queries";
 import type { Availability, AvailabilityKind } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -26,7 +27,7 @@ export default function AvailabilityPage() {
   const [tab, setTab] = useState<"mine" | "team">("mine");
   return (
     <>
-      <PageHeader title="Dostupnost" description="Kdy můžete a chcete pracovat – podle toho koordinátor navrhuje obsazení." />
+      <PageHeader title="Dostupnost" description="Do středy nahlas, kdy můžeš příští týden pracovat – podle toho dostaneš nabídky lekcí." />
       {user.isStaff && (
         <div className="mb-4 flex w-fit rounded-lg bg-muted p-0.5">
           {([["mine", "Moje dostupnost"], ["team", "Dostupnost týmu"]] as const).map(([k, l]) => (
@@ -34,7 +35,7 @@ export default function AvailabilityPage() {
           ))}
         </div>
       )}
-      {tab === "mine" ? <MyAvailability /> : <TeamAvailability />}
+      {tab === "mine" ? <div className="space-y-4"><AvailabilityReminder /><MyAvailability /></div> : <TeamAvailability />}
     </>
   );
 }
@@ -165,7 +166,31 @@ function TeamAvailability() {
     .filter((r) => !kind || (kind === "none" ? !r.kind : r.kind === kind))
     .sort((a, b) => order(a.kind) - order(b.kind));
 
+  const next = nextWeekRange();
+  const missing = (team.data ?? [])
+    .filter((p) => p.is_active && p.roles.includes("instructor"))
+    .filter((p) => !(avail.data ?? []).some((a) => a.user_id === p.id && (a.weekday != null || (a.date && a.date >= next.from && a.date <= next.to))))
+    .sort((a, b) => TIER_ORDER[a.tier] - TIER_ORDER[b.tier]);
+
   return (
+    <div className="space-y-4">
+    <Card className={`gap-2 p-4 sm:p-5 ${missing.length ? "border-warning/50" : ""}`}>
+      <div className="font-semibold">
+        Příští týden ({fmtDate(`${next.from}T12:00:00Z`)} – {fmtDate(`${next.to}T12:00:00Z`)}):{" "}
+        {missing.length === 0 ? <span className="text-success">dostupnost nahlásili všichni ✓</span> : `nenahlásilo ${missing.length}`}
+      </div>
+      {missing.length > 0 && (
+        <div className="flex flex-wrap gap-2">
+          {missing.map((p) => (
+            <span key={p.id} className="flex items-center gap-1.5 rounded-full border px-2 py-1 text-sm">
+              <UserAvatar profile={p} className="size-5" />{fullName(p)}
+              <ToneBadge tone={TIER[p.tier].tone}>{TIER[p.tier].label}</ToneBadge>
+            </span>
+          ))}
+        </div>
+      )}
+      <p className="text-xs text-muted-foreground">Termín pro nahlášení je středa. Pravidelná týdenní dostupnost se počítá jako nahlášená.</p>
+    </Card>
     <Card className="gap-3 p-4 sm:p-5">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
         <Field label="Datum"><Input type="date" value={date} onChange={(e) => setDate(e.target.value)} /></Field>
@@ -195,6 +220,7 @@ function TeamAvailability() {
         </ul>
       )}
     </Card>
+    </div>
   );
 }
 

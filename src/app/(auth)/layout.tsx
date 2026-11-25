@@ -19,7 +19,7 @@ export default function AuthLayout({ children }: LayoutProps<"/">) {
           </h1>
           <ul className="space-y-3 text-sky-50/90">
             <li className="flex gap-3"><CalendarDays className="size-5 text-sky-300" /> Přihlašování na volné lekce jedním klepnutím</li>
-            <li className="flex gap-3"><Sparkles className="size-5 text-sky-300" /> Výkonové kredity a bonusy v reálném čase</li>
+            <li className="flex gap-3"><Sparkles className="size-5 text-sky-300" /> Odučené hodiny a odměna vždy přehledně</li>
             <li className="flex gap-3"><Wallet className="size-5 text-sky-300" /> Přehledné měsíční výkazy a odměny</li>
           </ul>
         </div>

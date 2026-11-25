@@ -89,10 +89,6 @@ export function LessonForm({ copyFrom }: { copyFrom?: string }) {
   const onSubmit = form.handleSubmit(async (values) => {
     if (dates.length === 0) return toast.error("Zadejte alespoň jeden termín.");
     if (dates.length > 200) return toast.error("Najednou lze vytvořit nejvýše 200 termínů.");
-    if (selectedType?.credit_multiplier == null && values.credit_multiplier === "") {
-      form.setError("credit_multiplier", { message: "U tohoto programu zadejte násobek" });
-      return;
-    }
     const lessonId = await create.mutateAsync({
       p: {
         title: values.title,
@@ -161,15 +157,12 @@ export function LessonForm({ copyFrom }: { copyFrom?: string }) {
             <Field label="Potřebný počet instruktorů" error={err.required_instructors?.message}>
               <Input type="number" min={1} max={50} {...form.register("required_instructors")} />
             </Field>
-            <Field
-              label="Kreditový násobek"
-              error={err.credit_multiplier?.message}
-              hint={selectedType?.credit_multiplier != null ? `Výchozí pro typ: ${selectedType.credit_multiplier} kr / hod` : "U tohoto typu je povinný"}
-            >
-              <Input type="number" step="0.05" min={0} max={10}
-                placeholder={selectedType?.credit_multiplier != null ? String(selectedType.credit_multiplier) : "např. 2"}
-                {...form.register("credit_multiplier")} />
-            </Field>
+            <div className="flex flex-col justify-end gap-1.5">
+              <span className="text-sm font-medium">Odměna instruktora</span>
+              <div className="flex h-9 items-center rounded-lg border bg-muted/40 px-2.5 text-sm">
+                {selectedType ? `${new Intl.NumberFormat("cs-CZ").format(Number(selectedType.hourly_rate))} Kč / hod · sazba programu` : "Podle zvoleného programu"}
+              </div>
+            </div>
           </div>
         </Card>
 

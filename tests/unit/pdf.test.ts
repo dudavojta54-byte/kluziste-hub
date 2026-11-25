@@ -6,11 +6,11 @@ import { buildStatementsPdf } from "@/lib/pdf";
 const s: StatementWithName = {
   name: "Řehoř Žďárský", user_id: "u1", period: "2026-12-01", hours: 12.5, lessons: 7, lesson_credits: 28.75, bonus_credits: 3,
   total_credits: 31.75, bonus_amount: 500, model: "hourly", credit_rate: 0, hourly_rate: 250, fixed_amount: 0,
-  monthly_credit_target: 40, base_amount: 3125, total_amount: 3625, closed: false, by_type: [],
+  monthly_credit_target: 40, program_amount: 3125, base_amount: 3125, total_amount: 3625, closed: false, by_type: [],
   items: Array.from({ length: 60 }, (_, i) => ({
     id: String(i), occurrence_id: "o", title: `Školička bruslení – skupina ${i}`, starts_at: "2026-12-01T15:00:00Z",
     ends_at: "2026-12-01T16:30:00Z", lesson_type: "Školička bruslení", location: "Letná", status: "present" as const,
-    hours: 1.5, credit_multiplier: 2, credits: 3,
+    hours: 1.5, credit_multiplier: 2, credits: 3, hourly_rate: 400, amount: 600,
   })),
   bonuses: [{ id: "b", reason: "last_minute", reason_text: "Záskok – úterý", awarded_on: "2026-12-10", credits: 3, amount: 500 }],
 };

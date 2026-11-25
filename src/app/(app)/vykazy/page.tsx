@@ -47,7 +47,7 @@ function Reports() {
     <>
       <PageHeader
         title="Výkazy a odměny"
-        description="Skutečně odpracované hodiny, výkonové kredity a finanční odměny – evidované odděleně."
+        description="Odučené hodiny × sazba programu + bonusy. Počítají se jen hodiny schválené správcem."
         actions={<MonthPicker value={period} onChange={(p) => nav({ obdobi: p })} />}
       />
       {tabs.length > 1 && (
@@ -88,7 +88,7 @@ function PeriodControls({ period }: { period: string }) {
         {closed ? <Lock className="size-5 text-success" /> : <LockOpen className="size-5 text-muted-foreground" />}
         <div>
           <div className="font-semibold">{fmtMonth(period)}</div>
-          <div className="text-xs text-muted-foreground">{closed ? "Výkaz je uzavřen – data jsou zamčena a odměny zafixovány." : "Otevřený měsíc – docházku a bonusy lze upravovat."}</div>
+          <div className="text-xs text-muted-foreground">{closed ? "Výkaz je uzavřen – hodiny a odměny jsou zafixované." : "Otevřený měsíc – hodiny a bonusy lze upravovat."}</div>
         </div>
       </div>
       <div className="ml-auto flex gap-2">
@@ -101,7 +101,7 @@ function PeriodControls({ period }: { period: string }) {
           </Button>
         ) : (
           <Button size="sm" disabled={close.isPending}
-            onClick={() => confirm(`Uzavřít ${fmtMonth(period)}? Docházku, kredity a bonusy pak nepůjde měnit.`) && close.mutate({ p_period: period })}>
+            onClick={() => confirm(`Uzavřít ${fmtMonth(period)}? Hodiny a bonusy pak nepůjde měnit.`) && close.mutate({ p_period: period })}>
             {close.isPending ? <Spinner /> : <Lock />} Uzavřít měsíc
           </Button>
         )}
@@ -141,7 +141,7 @@ function BonusDialog({ userId, name }: { userId: string; name: string }) {
   const [open, setOpen] = useState(false);
   const [f, setF] = useState({ reason: "quality" as BonusReason, text: "", date: todayPrague(), credits: "", amount: "" });
   const add = useRpc<Record<string, unknown>>("add_bonus", { success: "Bonus přidělen a instruktor upozorněn." });
-  const valid = f.text.trim().length >= 2 && (Number(f.credits) > 0 || Number(f.amount) > 0);
+  const valid = f.text.trim().length >= 2 && Number(f.amount.replace(",", ".")) > 0;
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <Button onClick={() => setOpen(true)}><Award /> Přidat bonus</Button>
@@ -155,16 +155,13 @@ function BonusDialog({ userId, name }: { userId: string; name: string }) {
           </Field>
           <Field label="Popis"><Textarea rows={2} value={f.text} onChange={(e) => setF({ ...f, text: e.target.value })} placeholder="např. Záskok 12. 12. za nemocnou kolegyni" /></Field>
           <Field label="Datum"><Input type="date" value={f.date} onChange={(e) => setF({ ...f, date: e.target.value })} /></Field>
-          <div className="grid grid-cols-2 gap-3">
-            <Field label="Bonusové kredity"><Input inputMode="decimal" value={f.credits} onChange={(e) => setF({ ...f, credits: e.target.value })} placeholder="0" /></Field>
-            <Field label="Finanční odměna (Kč)"><Input inputMode="decimal" value={f.amount} onChange={(e) => setF({ ...f, amount: e.target.value })} placeholder="0" /></Field>
-          </div>
+          <Field label="Částka (Kč)"><Input inputMode="decimal" value={f.amount} onChange={(e) => setF({ ...f, amount: e.target.value })} placeholder="např. 500" /></Field>
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => setOpen(false)}>Zrušit</Button>
           <Button disabled={!valid || add.isPending} onClick={() => add.mutateAsync({
             p_user: userId, p_reason: f.reason, p_reason_text: f.text.trim(), p_awarded_on: f.date,
-            p_credits: Number(f.credits.replace(",", ".")) || 0, p_amount: Number(f.amount.replace(",", ".")) || 0,
+            p_credits: 0, p_amount: Number(f.amount.replace(",", ".")) || 0,
           }).then(() => { setOpen(false); setF({ ...f, text: "", credits: "", amount: "" }); }).catch(() => {})}>
             {add.isPending && <Spinner />} Přidělit bonus
           </Button>
@@ -176,7 +173,7 @@ function BonusDialog({ userId, name }: { userId: string; name: string }) {
 
 function RewardDialog({ userId, name }: { userId: string; name: string }) {
   const [open, setOpen] = useState(false);
-  const [f, setF] = useState({ model: "credit" as RewardModel, credit_rate: "", hourly_rate: "", fixed_amount: "", target: "", valid_from: startOfMonth(todayPrague()), note: "" });
+  const [f, setF] = useState({ model: "program" as RewardModel, credit_rate: "", hourly_rate: "", fixed_amount: "", target: "", valid_from: startOfMonth(todayPrague()), note: "" });
   const save = useTableMutation<typeof f>(
     (sb, v) => sb.from("reward_settings").upsert({
       user_id: userId, model: v.model,
@@ -187,12 +184,12 @@ function RewardDialog({ userId, name }: { userId: string; name: string }) {
   );
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <Button variant="outline" onClick={() => setOpen(true)}><Wallet /> Model odměny</Button>
+      <Button variant="outline" onClick={() => setOpen(true)}><Wallet /> Způsob odměny</Button>
       <DialogContent className="sm:max-w-md">
         <DialogHeader><DialogTitle>Odměňování – {name}</DialogTitle></DialogHeader>
         <div className="grid gap-3">
           <div className="grid gap-2">
-            {(Object.keys(REWARD_MODEL) as RewardModel[]).map((m) => (
+            {(Object.keys(REWARD_MODEL) as RewardModel[]).filter((m) => m !== "credit").map((m) => (
               <button key={m} type="button" onClick={() => setF({ ...f, model: m })}
                 className={cn("rounded-lg border p-3 text-left", f.model === m ? "border-primary bg-primary/8" : "hover:bg-muted")}>
                 <div className="text-sm font-medium">{REWARD_MODEL[m].label}</div>
@@ -203,10 +200,7 @@ function RewardDialog({ userId, name }: { userId: string; name: string }) {
           {f.model === "credit" && <Field label="Cena kreditu (Kč)"><Input inputMode="decimal" value={f.credit_rate} onChange={(e) => setF({ ...f, credit_rate: e.target.value })} /></Field>}
           {f.model === "hourly" && <Field label="Hodinová sazba (Kč)"><Input inputMode="decimal" value={f.hourly_rate} onChange={(e) => setF({ ...f, hourly_rate: e.target.value })} /></Field>}
           {f.model === "fixed" && <Field label="Fixní měsíční odměna (Kč)"><Input inputMode="decimal" value={f.fixed_amount} onChange={(e) => setF({ ...f, fixed_amount: e.target.value })} /></Field>}
-          <div className="grid grid-cols-2 gap-3">
-            <Field label="Měsíční cíl (kredity)"><Input inputMode="decimal" value={f.target} onChange={(e) => setF({ ...f, target: e.target.value })} placeholder="nepovinné" /></Field>
-            <Field label="Platí od"><Input type="date" value={f.valid_from} onChange={(e) => setF({ ...f, valid_from: e.target.value })} /></Field>
-          </div>
+          <Field label="Platí od"><Input type="date" value={f.valid_from} onChange={(e) => setF({ ...f, valid_from: e.target.value })} /></Field>
           <Field label="Poznámka"><Input value={f.note} onChange={(e) => setF({ ...f, note: e.target.value })} /></Field>
         </div>
         <DialogFooter>
@@ -229,6 +223,7 @@ function RewardHistory({ userId }: { userId: string }) {
           <li key={r.id} className="flex flex-wrap items-center justify-between gap-2 py-2">
             <span>od <b>{fmtDate(`${r.valid_from}T12:00:00Z`)}</b> · {REWARD_MODEL[r.model].label}</span>
             <span className="text-muted-foreground">
+              {r.model === "program" && "sazby programů"}
               {r.model === "credit" && `${fmtMoney(r.credit_rate)} / kredit`}
               {r.model === "hourly" && `${fmtMoney(r.hourly_rate)} / hod`}
               {r.model === "fixed" && `${fmtMoney(r.fixed_amount)} / měsíc`}

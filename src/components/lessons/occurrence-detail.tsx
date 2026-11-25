@@ -2,12 +2,13 @@
 
 import { useQuery } from "@tanstack/react-query";
 import {
-  ArrowLeft, Ban, CalendarClock, Check, ClipboardCheck, Copy, Info, MapPin, Pencil, Sparkles, UserMinus, UserPlus, Users, X,
+  ArrowLeft, Ban, CalendarClock, Check, ClipboardCheck, Copy, Info, MapPin, Pencil, Sparkles, UserMinus, UserPlus, Users, Wallet, X,
 } from "lucide-react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { EmptyState, Field, LoadingList, NativeSelect, SectionTitle, Spinner, ToneBadge, TypeDot, UserAvatar } from "@/components/common";
+import { ReportWorkForm } from "@/components/instructor/work";
 import { ApplyButton, occurrenceRelation } from "@/components/lessons/occurrence-card";
 import { useUser } from "@/components/providers";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -16,11 +17,12 @@ import { Card } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { APPLICATION_STATUS, ATTENDANCE_STATUS, AVAILABILITY_KIND, OCCURRENCE_STATUS } from "@/lib/constants";
+import { APPLICATION_STATUS, ATTENDANCE_STATUS, AVAILABILITY_KIND, OCCURRENCE_STATUS, TIER } from "@/lib/constants";
 import { pragueDate, pragueTime } from "@/lib/dates";
-import { durationHours, fmtDateTime, fmtDayLong, fmtHours, fmtNum, fmtTimeRange, fullName } from "@/lib/format";
+import { durationHours, fmtDateTime, fmtDayLong, fmtHours, fmtMoney, fmtNum, fmtTimeRange, fullName } from "@/lib/format";
 import {
   useApplicationsFor, useLessonTypes, useLocations, useOccurrence, useProfilesById, useRpc, useSeriesCount, useSuggestions,
+  useWorkReports,
 } from "@/lib/queries";
 import { getSupabase } from "@/lib/supabase/client";
 import type { AttendanceStatus, OccurrenceFull } from "@/lib/types";
@@ -63,7 +65,7 @@ export function OccurrenceDetail({ id }: { id: string }) {
               <span className="flex items-center gap-2 capitalize"><CalendarClock className="size-4" />{fmtDayLong(o.starts_at)}, {fmtTimeRange(o.starts_at, o.ends_at)}</span>
               <span className="flex items-center gap-2"><MapPin className="size-4" />{o.location.name}</span>
               <span className="flex items-center gap-2"><Users className="size-4" />{rel.assigned.length} / {o.required_instructors} instruktorů</span>
-              <span className="flex items-center gap-2"><Sparkles className="size-4" />{fmtNum(o.credit_multiplier)} kr / hod · {fmtNum(durationHours(o.starts_at, o.ends_at) * o.credit_multiplier)} kr za lekci</span>
+              <span className="flex items-center gap-2"><Wallet className="size-4" />{fmtMoney(o.lesson_type.hourly_rate)} / hod · {fmtMoney(durationHours(o.starts_at, o.ends_at) * o.lesson_type.hourly_rate)} za lekci</span>
             </div>
             {o.registration_deadline && o.status === "scheduled" && (
               <p className="text-xs text-muted-foreground">Uzávěrka přihlášek: {fmtDateTime(o.registration_deadline)}</p>
@@ -101,6 +103,13 @@ export function OccurrenceDetail({ id }: { id: string }) {
             </Card>
           )}
 
+          {rel.isMine && started && o.status === "scheduled" && (
+            <Card className="gap-3 border-primary/40 bg-primary/5 p-4 sm:p-6">
+              <SectionTitle><span className="flex items-center gap-2"><ClipboardCheck className="size-5 text-primary" /> Vykázat odučený čas</span></SectionTitle>
+              <p className="-mt-2 text-sm text-muted-foreground">Zadej skutečně odučené hodiny. Správce je schválí a odměna se započítá do výkazu.</p>
+              <MyReport o={o} />
+            </Card>
+          )}
           {user.isAdmin && started && o.status !== "cancelled" && <AttendancePanel o={o} />}
           {user.isStaff && o.status === "scheduled" && <ApplicationsPanel o={o} />}
         </div>
@@ -129,6 +138,19 @@ export function OccurrenceDetail({ id }: { id: string }) {
 }
 
 // ------------------------------------------------------------------ instruktor
+function MyReport({ o }: { o: OccurrenceFull }) {
+  const user = useUser();
+  const reports = useWorkReports({ occurrenceId: o.id });
+  const mine = reports.data?.find((r) => r.user_id === user.id);
+  if (reports.isLoading) return null;
+  return (
+    <>
+      {mine && <ToneBadge tone="warning" className="w-fit">Vykázáno {fmtNum(mine.hours)} h – čeká na schválení</ToneBadge>}
+      <ReportWorkForm occ={o} report={mine} />
+    </>
+  );
+}
+
 function MyActions({ o, myApp, canApply, isMine }: {
   o: OccurrenceFull;
   myApp?: { id: string; status: keyof typeof APPLICATION_STATUS };
@@ -202,7 +224,8 @@ function ApplicationsPanel({ o }: { o: OccurrenceFull }) {
               <div className="flex min-w-0 flex-1 items-center gap-3">
                 <UserAvatar profile={map.get(a.user_id)} />
                 <div className="min-w-0">
-                  <div className="text-sm font-medium">{fullName(map.get(a.user_id))}</div>
+                  <div className="flex items-center gap-1.5 text-sm font-medium">{fullName(map.get(a.user_id))}
+                    {map.get(a.user_id) && <ToneBadge tone={TIER[map.get(a.user_id)!.tier].tone}>{TIER[map.get(a.user_id)!.tier].label}</ToneBadge>}</div>
                   <div className="text-xs text-muted-foreground">{fmtDateTime(a.created_at)}{a.note ? ` · „${a.note}“` : ""}</div>
                 </div>
                 <ToneBadge tone={APPLICATION_STATUS[a.status].tone}>{APPLICATION_STATUS[a.status].label}</ToneBadge>
@@ -250,14 +273,15 @@ function SuggestionsPanel({ o }: { o: OccurrenceFull }) {
   return (
     <Card className="gap-3 p-4 sm:p-5">
       <SectionTitle>Doporučení instruktoři</SectionTitle>
-      <p className="-mt-2 text-xs text-muted-foreground">Podle dostupnosti, specializace, lokality a vytížení v měsíci.</p>
+      <p className="-mt-2 text-xs text-muted-foreground">Přednost mají hlavní instruktoři, pak podle dostupnosti, specializace a lokality.</p>
       {s.isLoading ? <LoadingList rows={2} /> : (
         <ul className="space-y-2">
           {(s.data ?? []).slice(0, 8).map((x) => (
             <li key={x.user_id} className="flex items-center gap-2">
               <UserAvatar profile={{ first_name: x.name.split(" ")[0] ?? "", last_name: x.name.split(" ")[1] ?? "", avatar_url: x.avatar_url }} />
               <div className="min-w-0 flex-1">
-                <div className="truncate text-sm font-medium">{x.name}</div>
+                <div className="flex items-center gap-1.5 truncate text-sm font-medium">{x.name}
+                  {x.tier !== "flexible" && <ToneBadge tone={TIER[x.tier].tone}>{TIER[x.tier].label}</ToneBadge>}</div>
                 <div className="flex flex-wrap gap-1 text-[11px]">
                   {x.has_conflict && <ToneBadge tone="destructive">Kolize</ToneBadge>}
                   {x.availability && <ToneBadge tone={AVAILABILITY_KIND[x.availability].tone}>{AVAILABILITY_KIND[x.availability].label}</ToneBadge>}
@@ -295,7 +319,7 @@ function EditDialog({ o }: { o: OccurrenceFull }) {
     const p: Record<string, unknown> = {
       title: f.title, lesson_type_id: f.lesson_type_id, location_id: f.location_id,
       start_time: f.start_time, end_time: f.end_time, required_instructors: Number(f.required_instructors),
-      credit_multiplier: Number(f.credit_multiplier), description: f.description, instructions: f.instructions,
+      description: f.description, instructions: f.instructions,
       registration_status: f.registration_status, registration_deadline_hours: Number(f.deadline_hours),
     };
     if (scope === "single") p.date = f.date;
@@ -327,7 +351,6 @@ function EditDialog({ o }: { o: OccurrenceFull }) {
             <Field label="Konec"><Input type="time" value={f.end_time} onChange={set("end_time")} /></Field>
           </div>
           <Field label="Počet instruktorů"><Input type="number" min={1} value={f.required_instructors} onChange={set("required_instructors")} /></Field>
-          <Field label="Kreditový násobek"><Input type="number" step="0.05" min={0} value={f.credit_multiplier} onChange={set("credit_multiplier")} /></Field>
           <Field label="Přihlašování">
             <NativeSelect value={f.registration_status} onChange={set("registration_status")}>
               <option value="open">Otevřené</option>
@@ -415,17 +438,21 @@ function AttendancePanel({ o }: { o: OccurrenceFull }) {
     },
   });
   const planned = durationHours(o.starts_at, o.ends_at);
+  const reports = useWorkReports({ occurrenceId: o.id });
+  const reportOf = (assignmentId: string) => reports.data?.find((r) => r.assignment_id === assignmentId);
   const [entries, setEntries] = useState<Record<string, { status: AttendanceStatus; hours: string; note: string }>>({});
   const confirmAtt = useRpc<{ p_occurrence: string; p_entries: unknown[] }, number>("confirm_attendance", {
-    success: (n) => `Účast potvrzena (${n}). Kredity byly připsány.`,
+    success: (n) => `Schváleno (${n}). Odměna se započítala do výkazu.`,
   });
 
   const row = (assignmentId: string) => {
     const existing = records.data?.find((r) => r.assignment_id === assignmentId);
+    const rep = reportOf(assignmentId);
+    const hours = existing ? existing.hours : rep ? Number(rep.hours) : planned;
     return entries[assignmentId] ?? {
-      status: existing?.status ?? "present",
-      hours: String(existing ? existing.hours : planned),
-      note: existing?.note ?? "",
+      status: existing?.status ?? (hours < planned ? "partial" : "present"),
+      hours: String(hours),
+      note: existing?.note ?? rep?.note ?? "",
     };
   };
   const update = (id: string, patch: Partial<{ status: AttendanceStatus; hours: string; note: string }>) =>
@@ -442,10 +469,10 @@ function AttendancePanel({ o }: { o: OccurrenceFull }) {
   return (
     <Card id="dochazka" className="scroll-mt-20 gap-3 p-4 sm:p-6">
       <SectionTitle>
-        <span className="flex items-center gap-2"><ClipboardCheck className="size-5 text-primary" /> Potvrzení účasti</span>
+        <span className="flex items-center gap-2"><ClipboardCheck className="size-5 text-primary" /> Schválení odučeného času</span>
       </SectionTitle>
       <p className="-mt-2 text-sm text-muted-foreground">
-        Zadejte skutečně odpracované hodiny. Kredity = hodiny × {fmtNum(o.credit_multiplier)}. Opravy se ukládají jako korekční záznamy s auditní stopou.
+        Hodiny jsou předvyplněné z vykázání instruktora (jinak plán). Odměna = hodiny × {fmtMoney(o.lesson_type.hourly_rate)}. Opravy se ukládají s auditní stopou.
       </p>
       {assigned.length === 0 ? (
         <p className="text-sm text-muted-foreground">Na lekci není nikdo přiřazen. Záskok přidáte přes doporučené instruktory nebo úpravu kapacity.</p>
@@ -461,7 +488,8 @@ function AttendancePanel({ o }: { o: OccurrenceFull }) {
                   <UserAvatar profile={map.get(a.user_id)} />
                   <div>
                     <div className="text-sm font-medium">{fullName(map.get(a.user_id))}</div>
-                    {existing && <div className="text-[11px] text-success">Potvrzeno {fmtDateTime(existing.confirmed_at)}</div>}
+                    {existing && <div className="text-[11px] text-success">Schváleno {fmtDateTime(existing.confirmed_at)}</div>}
+                    {!existing && reportOf(a.id) && <div className="text-[11px] text-warning">Vykázal(a) {fmtNum(reportOf(a.id)!.hours)} h</div>}
                   </div>
                 </div>
                 <NativeSelect value={r.status} onChange={(e) => update(a.id, { status: e.target.value as AttendanceStatus })}>
@@ -470,13 +498,13 @@ function AttendancePanel({ o }: { o: OccurrenceFull }) {
                 <Input inputMode="decimal" value={r.status === "absent" ? "0" : r.hours} disabled={r.status === "absent"}
                   onChange={(e) => update(a.id, { hours: e.target.value, status: r.status === "present" && Number(e.target.value) < planned ? "partial" : r.status })}
                   aria-label="Hodiny" />
-                <div className="text-right text-sm tabular-nums"><b>{fmtNum(hours * o.credit_multiplier)}</b> kr</div>
+                <div className="text-right text-sm tabular-nums"><b>{fmtMoney(hours * o.lesson_type.hourly_rate)}</b></div>
               </div>
             );
           })}
           <div className="flex justify-end">
             <Button onClick={submit} disabled={confirmAtt.isPending}>
-              {confirmAtt.isPending ? <Spinner /> : <Check />} {records.data?.length ? "Uložit opravu" : "Potvrdit účast a připsat kredity"}
+              {confirmAtt.isPending ? <Spinner /> : <Check />} {records.data?.length ? "Uložit opravu" : "Schválit odučený čas"}
             </Button>
           </div>
         </div>

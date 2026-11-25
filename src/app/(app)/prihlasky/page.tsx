@@ -8,7 +8,7 @@ import { activeAssigned } from "@/components/lessons/occurrence-card";
 import { useUser } from "@/components/providers";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { APPLICATION_STATUS } from "@/lib/constants";
+import { APPLICATION_STATUS, TIER, TIER_ORDER } from "@/lib/constants";
 import { fmtDateTime, fmtDayLong, fmtTimeRange, fullName } from "@/lib/format";
 import { useOpenApplications, useProfilesById, useRpc } from "@/lib/queries";
 
@@ -49,12 +49,13 @@ export default function ApplicationsPage() {
                   <ToneBadge tone={assigned >= o.required_instructors ? "success" : "warning"}>Obsazeno {assigned}/{o.required_instructors}</ToneBadge>
                 </Link>
                 <ul className="divide-y rounded-lg border">
-                  {list.map((a) => (
+                  {[...list].sort((x, y) => TIER_ORDER[map.get(x.user_id)?.tier ?? "flexible"] - TIER_ORDER[map.get(y.user_id)?.tier ?? "flexible"]).map((a) => (
                     <li key={a.id} className="flex flex-col gap-2 p-3 sm:flex-row sm:items-center">
                       <div className="flex flex-1 items-center gap-3">
                         <UserAvatar profile={map.get(a.user_id)} />
                         <div className="min-w-0">
-                          <div className="text-sm font-medium">{fullName(map.get(a.user_id))}</div>
+                          <div className="flex items-center gap-1.5 text-sm font-medium">{fullName(map.get(a.user_id))}
+                            {map.get(a.user_id) && <ToneBadge tone={TIER[map.get(a.user_id)!.tier].tone}>{TIER[map.get(a.user_id)!.tier].label}</ToneBadge>}</div>
                           <div className="text-xs text-muted-foreground">{fmtDateTime(a.created_at)}{a.note ? ` · „${a.note}“` : ""}</div>
                         </div>
                         <ToneBadge tone={APPLICATION_STATUS[a.status].tone}>{APPLICATION_STATUS[a.status].label}</ToneBadge>

@@ -9,7 +9,7 @@ const manrope = Manrope({ variable: "--font-display", subsets: ["latin", "latin-
 
 export const metadata: Metadata = {
   title: { default: "Kluziště Praha | Instructor Hub", template: "%s · Instructor Hub" },
-  description: "Plánování směn, lekcí, kreditů a odměn instruktorů bruslení.",
+  description: "Plánování směn, lekcí, odučených hodin a odměn instruktorů bruslení.",
   applicationName: "Instructor Hub",
   appleWebApp: { capable: true, title: "Instructor Hub", statusBarStyle: "black-translucent" },
   icons: { icon: "/icons/icon.svg", apple: "/pwa-icon/180" },

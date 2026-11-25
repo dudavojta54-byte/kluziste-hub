@@ -10,7 +10,8 @@ export type ApplicationStatus =
   | "cancel_requested";
 export type AvailabilityKind = "available" | "unavailable" | "preferred";
 export type AttendanceStatus = "present" | "partial" | "absent";
-export type RewardModel = "credit" | "hourly" | "fixed";
+export type RewardModel = "program" | "credit" | "hourly" | "fixed";
+export type Tier = "main" | "development" | "flexible";
 export type BonusReason = "quality" | "last_minute" | "new_program" | "training" | "initiative" | "other";
 export type ContactCategory =
   | "program_manager"
@@ -33,6 +34,7 @@ export interface Profile {
   bio: string | null;
   notify_email: boolean;
   is_active: boolean;
+  tier: Tier;
   created_at: string;
 }
 
@@ -59,6 +61,7 @@ export interface LessonType {
   code: string;
   name: string;
   credit_multiplier: number | null;
+  hourly_rate: number;
   color: string;
   sort_order: number;
   is_active: boolean;
@@ -102,7 +105,7 @@ export interface Application {
 
 /** Termín se vztahy, jak ho vrací dotaz v useOccurrences */
 export interface OccurrenceFull extends Occurrence {
-  lesson_type: Pick<LessonType, "id" | "code" | "name" | "color">;
+  lesson_type: Pick<LessonType, "id" | "code" | "name" | "color" | "hourly_rate">;
   location: Pick<Location, "id" | "name" | "color">;
   assignments: Pick<Assignment, "id" | "user_id" | "status">[];
 }
@@ -186,6 +189,8 @@ export interface StatementItem {
   hours: number;
   credit_multiplier: number;
   credits: number;
+  hourly_rate: number;
+  amount: number;
 }
 
 export interface Statement {
@@ -197,6 +202,7 @@ export interface Statement {
   bonus_credits: number;
   total_credits: number;
   bonus_amount: number;
+  program_amount: number;
   model: RewardModel | null;
   credit_rate: number | null;
   hourly_rate: number | null;
@@ -205,7 +211,7 @@ export interface Statement {
   base_amount: number;
   total_amount: number;
   closed: boolean;
-  by_type: { lesson_type_id: string; name: string; color: string; hours: number; credits: number; lessons: number }[];
+  by_type: { lesson_type_id: string; name: string; color: string; hours: number; credits: number; lessons: number; amount: number; hourly_rate: number }[];
   items: StatementItem[];
   bonuses: { id: string; reason: BonusReason; reason_text: string; awarded_on: string; credits: number; amount: number }[];
 }
@@ -264,6 +270,7 @@ export interface Suggestion {
   has_conflict: boolean;
   availability: AvailabilityKind | null;
   application_status: ApplicationStatus | null;
+  tier: Tier;
   month_hours: number;
   score: number;
 }
@@ -274,4 +281,15 @@ export interface SessionUser {
   profile: Profile;
   roles: AppRole[];
   mustChangePassword?: boolean;
+}
+
+export interface WorkReport {
+  id: string;
+  assignment_id: string;
+  occurrence_id: string;
+  user_id: string;
+  hours: number;
+  note: string | null;
+  status: "submitted" | "approved";
+  created_at: string;
 }

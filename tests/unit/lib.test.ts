@@ -45,11 +45,12 @@ describe("hesla", () => {
 describe("9. měsíční export CSV", () => {
   const s: StatementWithName = {
     name: "Anna Nováková", user_id: "u1", period: "2026-12-01", hours: 3, lessons: 2, lesson_credits: 7.5, bonus_credits: 2,
-    total_credits: 9.5, bonus_amount: 500, model: "credit", credit_rate: 100, hourly_rate: 0, fixed_amount: 0,
-    monthly_credit_target: null, base_amount: 950, total_amount: 1450, closed: true,
+    total_credits: 9.5, bonus_amount: 500, model: "program", credit_rate: 100, hourly_rate: 0, fixed_amount: 0,
+    monthly_credit_target: null, base_amount: 950, total_amount: 1450, closed: true, program_amount: 950,
     by_type: [],
     items: [{ id: "a", occurrence_id: "o", title: "Školička; \"začátečníci\"", starts_at: "2026-12-01T15:00:00Z", ends_at: "2026-12-01T16:30:00Z",
-      lesson_type: "Školička bruslení", location: "Letná", status: "present", hours: 1.5, credit_multiplier: 2, credits: 3 }],
+      lesson_type: "Školička bruslení", location: "Letná", status: "present", hours: 1.5, credit_multiplier: 2, credits: 3,
+      hourly_rate: 400, amount: 600 }],
     bonuses: [{ id: "b", reason: "last_minute", reason_text: "Záskok", awarded_on: "2026-12-10", credits: 2, amount: 500 }],
   };
 
@@ -57,15 +58,16 @@ describe("9. měsíční export CSV", () => {
     const csv = teamSummaryCsv([s, { ...s, name: "Petr Svoboda", total_amount: 1000, hours: 2 }]);
     expect(csv.startsWith("﻿")).toBe(true);
     const lines = csv.trim().split("\r\n");
-    expect(lines[0]).toContain("Instruktor;Model odměny;Hodiny");
-    expect(lines[1]).toBe("Anna Nováková;A – Kreditová;3;2;7,5;2;9,5;500;950;1450");
-    expect(lines.at(-1)).toBe("Celkem;;5;4;15;4;19;1000;1900;2450");
+    expect(lines[0]).toBe("Instruktor;Způsob odměny;Hodiny;Dokončené lekce;Za lekce (Kč);Bonusy (Kč);Celkem (Kč)");
+    expect(lines[1]).toBe("Anna Nováková;Podle sazeb programů;3;2;950;500;1450");
+    expect(lines.at(-1)).toBe("Celkem;;5;4;1900;1000;2450");
   });
 
   test("detail: řádky lekcí, bonusů a souhrnu, správné escapování", () => {
     const csv = statementDetailCsv([s]);
     expect(csv).toContain('"Školička; ""začátečníci"""');
     expect(csv).toContain("1.12.2026;16:00–17:30");
+    expect(csv).toContain("Celá účast;1,5;400;600;");
     expect(csv).toContain("Záskok na poslední chvíli");
     expect(csv).toContain("SOUHRN");
   });

@@ -144,8 +144,8 @@ describe("2. Vytvoření lekce", () => {
     const { occurrences } = await createLesson(admin, { type: "individual", dates: [day(30)] });
     const o = await one<{ m: number }>("select credit_multiplier::float8 m from public.lesson_occurrences where id = $1", [occurrences[0]]);
     expect(o!.m).toBe(2.5);
-    await expect(createLesson(admin, { type: "special", dates: [day(30)] })).rejects.toThrow(/násobek/);
-    const sp = await createLesson(admin, { type: "special", dates: [day(30)], multiplier: 3 });
+    // tematický event už násobek nevyžaduje (kredity se nezobrazují)
+    const sp = await createLesson(admin, { type: "special", dates: [day(30)] });
     expect(sp.occurrences).toHaveLength(1);
   });
 
@@ -509,5 +509,75 @@ describe("Dostupnost, návrhy instruktorů, oznámení", () => {
     expect(d.estimated_cost).not.toBeNull();
     const c = await rpc<Record<string, unknown>>(db, coord, "admin_dashboard", [null]);
     expect(c.estimated_cost).toBeNull();
+  });
+});
+
+// ---------------------------------------------------------------------
+describe("Pravidla týmu 2026/27: sazby, vykazování, vlastní klient, úrovně", () => {
+  let lia: string;
+  beforeAll(async () => {
+    lia = await createUser(db, { email: "lia@kluziste.test", first: "Lia", last: "Nová" });
+  });
+
+  test("sazby programů: běžné 400, individuální 500, vlastní klient 600 Kč/h", async () => {
+    const r = await db.query<{ code: string; rate: number }>("select code, hourly_rate::float8 rate from public.lesson_types");
+    const m = Object.fromEntries(r.rows.map((x) => [x.code, x.rate]));
+    expect(m).toMatchObject({ skolicka: 400, schools: 400, animation: 400, special: 400, individual: 500, individual_own: 600 });
+  });
+
+  test("instruktor vykáže čas, správce schválí jedním klikem, odměna = hodiny × sazba", async () => {
+    const { occurrences: [occ] } = await createLesson(admin, { type: "individual", dates: [day(70)], start: "10:00", end: "11:00" });
+    await rpc(db, admin, "assign_instructor", [occ, lia]);
+    // před lekcí vykázat nelze
+    await expect(rpc(db, lia, "submit_work_report", [occ, 1, null])).rejects.toThrow(/až po začátku/);
+    await moveToPast(occ, 30, 1);
+    // nepřiřazený instruktor nevykáže
+    await expect(rpc(db, petr, "submit_work_report", [occ, 1, null])).rejects.toThrow(/nejste přiřazen/);
+    await rpc(db, lia, "submit_work_report", [occ, 1.5, "Klient chtěl prodloužit"]);
+    const mine = await asUser<{ status: string }>(db, lia, "select status from public.work_reports");
+    expect(mine).toEqual([{ status: "submitted" }]);
+    expect(await asUser(db, petr, "select * from public.work_reports")).toHaveLength(0);
+
+    // schválení bez zadaných hodin => použije vykázaný čas
+    await rpc(db, admin, "confirm_attendance", [occ, JSON.stringify([{ assignment_id: await assignmentOf(occ, lia) }])]);
+    const a = await one<{ hours: number; rate: number; amount: number; status: string }>(
+      "select hours::float8 hours, hourly_rate::float8 rate, amount::float8 amount, status from public.attendance_records where occurrence_id = $1", [occ]);
+    expect(a).toEqual({ hours: 1.5, rate: 500, amount: 750, status: "present" });
+    expect((await one<{ status: string }>("select status from public.work_reports where occurrence_id = $1", [occ]))!.status).toBe("approved");
+    await expect(rpc(db, lia, "submit_work_report", [occ, 2, null])).rejects.toThrow(/schválil/);
+  });
+
+  test("vlastní klient: instruktor si lekci zapíše sám (600 Kč/h), bez kolize", async () => {
+    const today = day(0);
+    const occ = await rpc<string>(db, lia, "create_own_lesson", [today, "07:00", "08:00", locId, "Paní Malá"]);
+    const o = await one<{ code: string; reg: string }>(
+      `select lt.code, o.registration_status reg from public.lesson_occurrences o join public.lesson_types lt on lt.id = o.lesson_type_id where o.id = $1`, [occ]);
+    expect(o).toEqual({ code: "individual_own", reg: "closed" });
+    // časová kolize s vlastní lekcí
+    await expect(rpc(db, lia, "create_own_lesson", [today, "07:30", "08:30", locId, null])).rejects.toThrow(/jinou potvrzenou lekci/);
+    // koordinátor bez role instruktor si lekci nezapíše
+    await expect(rpc(db, coord, "create_own_lesson", [today, "12:00", "13:00", locId, null])).rejects.toThrow(/jen instruktor/);
+  });
+
+  test("výchozí model bez nastavení = podle sazeb programů + finanční bonus", async () => {
+    const { occurrences: [occ] } = await createLesson(admin, { type: "skolicka", dates: [day(71)], start: "16:00", end: "18:00" });
+    await rpc(db, admin, "assign_instructor", [occ, lia]);
+    await moveToPast(occ, 40, 2);
+    await rpc(db, admin, "confirm_attendance", [occ, JSON.stringify([{ assignment_id: await assignmentOf(occ, lia) }])]);
+    const per = (await one<{ p: string }>("select public.period_of(starts_at)::text p from public.lesson_occurrences where id = $1", [occ]))!.p;
+    const s = await rpc<Record<string, number | string>>(db, lia, "monthly_statement", [lia, per]);
+    expect(s.model).toBe("program");
+    // 2 h × 400 (+ 1,5 h × 500 pokud je individuální lekce ve stejném měsíci)
+    const ind = await one<{ a: number }>(
+      "select coalesce(sum(amount),0)::float8 a from public.attendance_records where user_id = $1 and period = $2 and hourly_rate = 500", [lia, per]);
+    expect(s.base_amount).toBe(800 + ind!.a);
+  });
+
+  test("úrovně: hlavní instruktor má v návrzích přednost; úroveň mění jen správce", async () => {
+    const { occurrences: [occ] } = await createLesson(admin, { dates: [day(80)], start: "16:00", end: "17:00" });
+    await db.query("update public.profiles set tier = 'main' where id = $1", [lia]);
+    const s = await rpc<Array<{ user_id: string; tier: string }>>(db, coord, "suggest_instructors", [occ]);
+    expect(s[0]).toMatchObject({ user_id: lia, tier: "main" });
+    await expect(asUser(db, petr, "update public.profiles set tier = 'main' where id = $1", [petr])).rejects.toThrow(/pouze správce/);
   });
 });

@@ -4,7 +4,7 @@ export default function manifest(): MetadataRoute.Manifest {
   return {
     name: "Kluziště Praha | Instructor Hub",
     short_name: "Instructor Hub",
-    description: "Směny, lekce, kredity a odměny instruktorů bruslení",
+    description: "Směny, lekce, hodiny a odměny instruktorů bruslení",
     lang: "cs",
     start_url: "/",
     scope: "/",

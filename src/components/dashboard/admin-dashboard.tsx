@@ -6,7 +6,6 @@ import {
   ClipboardCheck,
   Clock,
   Inbox,
-  Sparkles,
   UserCheck,
   Users,
   Wallet,
@@ -14,12 +13,13 @@ import {
 import Link from "next/link";
 import { useState } from "react";
 import { EmptyState, LoadingList, PageHeader, SectionTitle, StatCard, ToneBadge, TypeDot } from "@/components/common";
+import { PendingReports } from "@/components/dashboard/pending-reports";
 import { TeamTable } from "@/components/dashboard/team-table";
 import { useUser } from "@/components/providers";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { startOfMonth, todayPrague } from "@/lib/dates";
-import { fmtDateTime, fmtDayLong, fmtHours, fmtMoney, fmtNum, fmtTimeRange, fmtDateShort } from "@/lib/format";
+import { fmtDateTime, fmtDayLong, fmtHours, fmtMoney, fmtTimeRange, fmtDateShort } from "@/lib/format";
 import { useAdminDashboard } from "@/lib/queries";
 import type { DashboardOccurrence } from "@/lib/types";
 
@@ -52,11 +52,9 @@ export function AdminDashboardView() {
         <StatCard label="Neobsazené" icon={AlertTriangle} value={data?.understaffed.length ?? "–"} hint="v příštích 14 dnech" />
         <StatCard label="Čekající přihlášky" icon={Inbox} value={data?.pending_applications ?? "–"} />
         <StatCard label="Aktivní instruktoři" icon={Users} value={data?.active_instructors ?? "–"} />
-        <StatCard label="Hodiny (měsíc)" icon={Clock} value={fmtHours(data?.month_hours)} hint={`${fmtNum(data?.month_credits)} kreditů`} />
-        {user.isAdmin ? (
-          <StatCard label="Odhad nákladů" icon={Wallet} value={fmtMoney(data?.estimated_cost)} hint="aktuální měsíc" />
-        ) : (
-          <StatCard label="Kredity (měsíc)" icon={Sparkles} value={fmtNum(data?.month_credits)} />
+        <StatCard label="Odučeno (měsíc)" icon={Clock} value={fmtHours(data?.month_hours)} hint="schválené hodiny" />
+        {user.isAdmin && (
+          <StatCard label="Odměny (měsíc)" icon={Wallet} value={fmtMoney(data?.estimated_cost)} hint="ze schválených hodin" />
         )}
       </div>
 
@@ -75,9 +73,12 @@ export function AdminDashboardView() {
         </Card>
       )}
 
+      <div className="mt-4"><PendingReports /></div>
+
       {user.isAdmin && data && data.unconfirmed.length > 0 && (
-        <Card className="mt-4 gap-2 border-primary/30 bg-primary/5 p-4">
-          <div className="flex items-center gap-2 font-semibold"><UserCheck className="size-4 text-primary" /> Čeká na potvrzení účasti ({data.unconfirmed.length})</div>
+        <Card className="mt-4 gap-2 p-4">
+          <div className="flex items-center gap-2 font-semibold"><UserCheck className="size-4 text-primary" /> Proběhlé lekce bez schválení ({data.unconfirmed.length})</div>
+          <p className="text-xs text-muted-foreground">Instruktor zatím nevykázal čas – můžete účast potvrdit sami v detailu lekce.</p>
           <div className="flex flex-wrap gap-2">
             {data.unconfirmed.map((o) => (
               <Button key={o.id} variant="outline" size="sm" render={<Link href={`/lekce/${o.id}#dochazka`} />}>

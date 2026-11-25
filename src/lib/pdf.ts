@@ -84,17 +84,17 @@ export async function buildStatementsPdf(opts: {
     text(ctx, "Souhrn", MARGIN, { size: 12, bold: true });
     ctx.y -= 18;
     const rows = opts.statements.map((s) => [
-      s.name, s.model ? REWARD_MODEL[s.model].label : "—", n2(s.hours), n2(s.lesson_credits), n2(s.bonus_credits), czk(s.bonus_amount), czk(s.total_amount),
+      s.name, REWARD_MODEL[s.model ?? "program"].label, n2(s.hours), String(s.lessons), czk(s.base_amount), czk(s.bonus_amount), czk(s.total_amount),
     ]);
-    const sum = (k: "hours" | "lesson_credits" | "bonus_credits" | "bonus_amount" | "total_amount") => opts.statements.reduce((a, s) => a + Number(s[k]), 0);
-    rows.push(["Celkem", "", n2(sum("hours")), n2(sum("lesson_credits")), n2(sum("bonus_credits")), czk(sum("bonus_amount")), czk(sum("total_amount"))]);
+    const sum = (k: "hours" | "lessons" | "base_amount" | "bonus_amount" | "total_amount") => opts.statements.reduce((a, s) => a + Number(s[k]), 0);
+    rows.push(["Celkem", "", n2(sum("hours")), String(sum("lessons")), czk(sum("base_amount")), czk(sum("bonus_amount")), czk(sum("total_amount"))]);
     table(ctx, [
       { label: "Instruktor", x: MARGIN, w: 130 },
       { label: "Model", x: 175, w: 90 },
-      { label: "Hodiny", x: 310, align: "right" },
-      { label: "Kredity", x: 365, align: "right" },
-      { label: "Bonus kr", x: 420, align: "right" },
-      { label: "Bonus Kč", x: 475, align: "right" },
+      { label: "Hodiny", x: 300, align: "right" },
+      { label: "Lekce", x: 345, align: "right" },
+      { label: "Za lekce", x: 420, align: "right" },
+      { label: "Bonusy", x: 475, align: "right" },
       { label: "Celkem", x: WIDTH - MARGIN, align: "right" },
     ], rows, true);
   }
@@ -105,25 +105,24 @@ export async function buildStatementsPdf(opts: {
       ctx.y -= 8;
       text(ctx, s.name, MARGIN, { size: 12, bold: true, color: ICE });
       ctx.y -= 16;
-      text(ctx, `${s.model ? REWARD_MODEL[s.model].label : "Model nenastaven"} · ${n2(s.hours)} h · ${n2(s.total_credits)} kreditů${s.monthly_credit_target ? ` (cíl ${n2(s.monthly_credit_target)})` : ""} · celkem ${czk(s.total_amount)}`, MARGIN, { color: GREY });
+      text(ctx, `${REWARD_MODEL[s.model ?? "program"].label} · ${n2(s.hours)} h · ${s.lessons} lekcí · celkem ${czk(s.total_amount)}`, MARGIN, { color: GREY });
       ctx.y -= 18;
       table(ctx, [
         { label: "Datum", x: MARGIN },
         { label: "Lekce", x: 80, w: 150 },
         { label: "Typ", x: 235, w: 105 },
         { label: "Účast", x: 345, w: 70 },
-        { label: "Hodiny", x: 450, align: "right" },
-        { label: "×", x: 490, align: "right" },
-        { label: "Kredity", x: WIDTH - MARGIN, align: "right" },
+        { label: "Hodiny", x: 440, align: "right" },
+        { label: "Sazba", x: 490, align: "right" },
+        { label: "Částka", x: WIDTH - MARGIN, align: "right" },
       ], [
-        ...s.items.map((i) => [d(i.starts_at), i.title, i.lesson_type, ATTENDANCE_STATUS[i.status], n2(i.hours), n2(i.credit_multiplier), n2(i.credits)]),
-        ...s.bonuses.map((b) => [d(`${b.awarded_on}T12:00:00Z`), `Bonus: ${b.reason_text}`, BONUS_REASON[b.reason], b.amount > 0 ? czk(b.amount) : "", "", "", n2(b.credits)]),
+        ...s.items.map((i) => [d(i.starts_at), i.title, i.lesson_type, ATTENDANCE_STATUS[i.status], n2(i.hours), czk(i.hourly_rate), czk(i.amount)]),
+        ...s.bonuses.map((b) => [d(`${b.awarded_on}T12:00:00Z`), `Bonus: ${b.reason_text}`, BONUS_REASON[b.reason], "", "", "", czk(b.amount)]),
       ]);
       const lines: [string, string][] = [
-        ["Kredity za lekce", n2(s.lesson_credits)],
-        ["Bonusové kredity", n2(s.bonus_credits)],
-        ["Základ odměny", czk(s.base_amount)],
-        ["Finanční bonusy", czk(s.bonus_amount)],
+        ["Odučeno", `${n2(s.hours)} h`],
+        ["Za lekce", czk(s.base_amount)],
+        ["Bonusy", czk(s.bonus_amount)],
       ];
       for (const [l, v] of lines) { ensure(ctx, 14); text(ctx, l, 380, { color: GREY }); text(ctx, v, WIDTH - MARGIN, { align: "right" }); ctx.y -= 13; }
       ensure(ctx, 16);

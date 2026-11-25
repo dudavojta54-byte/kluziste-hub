@@ -1,4 +1,5 @@
 import type {
+  Tier,
   AppRole,
   ApplicationStatus,
   AttendanceStatus,
@@ -47,9 +48,10 @@ export const AVAILABILITY_KIND: Record<AvailabilityKind, { label: string; tone: 
 };
 
 export const REWARD_MODEL: Record<RewardModel, { label: string; description: string }> = {
-  credit: { label: "A – Kreditová", description: "Schválené kredity × cena kreditu" },
-  hourly: { label: "B – Hodinová", description: "Skutečné hodiny × hodinová sazba" },
-  fixed: { label: "C – Fixní", description: "Smluvená částka; kredity jako výkonnostní cíl" },
+  program: { label: "Podle sazeb programů", description: "Odučené hodiny × sazba programu (výchozí pro všechny)" },
+  hourly: { label: "Vlastní hodinová sazba", description: "Všechny hodiny × individuální sazba (výjimka)" },
+  fixed: { label: "Fixní měsíční částka", description: "Smluvená částka nezávislá na hodinách (výjimka)" },
+  credit: { label: "Kreditová (původní)", description: "Kredity × cena kreditu – jen pro starší dohody" },
 };
 
 export const BONUS_REASON: Record<BonusReason, string> = {
@@ -82,3 +84,13 @@ export const TONE_CLASSES: Record<Tone, string> = {
   info: "bg-primary/10 text-primary border-primary/25",
   muted: "bg-muted text-muted-foreground border-border",
 };
+
+export const TIER: Record<Tier, { label: string; description: string; tone: Tone }> = {
+  main: { label: "Hlavní", description: "Prověření instruktoři, přednost při přidělování práce", tone: "success" },
+  development: { label: "Rozvojový", description: "Postupné zapracování a možnost většího zapojení", tone: "info" },
+  flexible: { label: "Flexibilní", description: "Posily na eventy, špičky a záskoky", tone: "muted" },
+};
+export const TIER_ORDER: Record<Tier, number> = { main: 0, development: 1, flexible: 2 };
+
+/** Týdenní rytmus plánování */
+export const AVAILABILITY_DEADLINE_WEEKDAY = 3; // středa

@@ -29,41 +29,38 @@ const localTime = (iso: string) =>
   new Intl.DateTimeFormat("cs-CZ", { timeZone: "Europe/Prague", hour: "2-digit", minute: "2-digit" }).format(new Date(iso));
 
 export const SUMMARY_HEADER = [
-  "Instruktor", "Model odměny", "Hodiny", "Dokončené lekce", "Kredity za lekce", "Bonusové kredity",
-  "Kredity celkem", "Finanční bonusy (Kč)", "Základ odměny (Kč)", "Celkem (Kč)",
+  "Instruktor", "Způsob odměny", "Hodiny", "Dokončené lekce", "Za lekce (Kč)", "Bonusy (Kč)", "Celkem (Kč)",
 ];
 
 export function summaryRow(s: StatementWithName): unknown[] {
   return [
-    s.name, s.model ? REWARD_MODEL[s.model].label : "nenastaveno", Number(s.hours), Number(s.lessons),
-    Number(s.lesson_credits), Number(s.bonus_credits), Number(s.total_credits), Number(s.bonus_amount),
-    Number(s.base_amount), Number(s.total_amount),
+    s.name, REWARD_MODEL[s.model ?? "program"].label, Number(s.hours), Number(s.lessons),
+    Number(s.base_amount), Number(s.bonus_amount), Number(s.total_amount),
   ];
 }
 
 export function teamSummaryCsv(statements: StatementWithName[]): string {
   const rows: unknown[][] = [SUMMARY_HEADER, ...statements.map(summaryRow)];
   const sum = (k: keyof Statement) => statements.reduce((a, s) => a + Number(s[k] ?? 0), 0);
-  rows.push(["Celkem", "", sum("hours"), sum("lessons"), sum("lesson_credits"), sum("bonus_credits"),
-    sum("total_credits"), sum("bonus_amount"), sum("base_amount"), sum("total_amount")]);
+  rows.push(["Celkem", "", sum("hours"), sum("lessons"), sum("base_amount"), sum("bonus_amount"), sum("total_amount")]);
   return toCsv(rows);
 }
 
 export function statementDetailCsv(statements: StatementWithName[]): string {
   const rows: unknown[][] = [[
-    "Instruktor", "Datum", "Čas", "Lekce", "Typ programu", "Lokalita", "Účast", "Hodiny", "Násobek", "Kredity", "Částka (Kč)", "Poznámka",
+    "Instruktor", "Datum", "Čas", "Lekce", "Typ programu", "Lokalita", "Účast", "Hodiny", "Sazba (Kč/h)", "Částka (Kč)", "Poznámka",
   ]];
   for (const s of statements) {
     for (const i of s.items) {
       rows.push([s.name, localDate(i.starts_at), `${localTime(i.starts_at)}–${localTime(i.ends_at)}`, i.title, i.lesson_type,
-        i.location, ATTENDANCE_STATUS[i.status], Number(i.hours), Number(i.credit_multiplier), Number(i.credits), "", ""]);
+        i.location, ATTENDANCE_STATUS[i.status], Number(i.hours), Number(i.hourly_rate), Number(i.amount), ""]);
     }
     for (const b of s.bonuses) {
       rows.push([s.name, localDate(`${b.awarded_on}T12:00:00Z`), "", "Bonus", BONUS_REASON[b.reason], "", "", "", "",
-        Number(b.credits), Number(b.amount), b.reason_text]);
+        Number(b.amount), b.reason_text]);
     }
-    rows.push([s.name, "", "", "SOUHRN", s.model ? REWARD_MODEL[s.model].label : "", "", "", Number(s.hours), "",
-      Number(s.total_credits), Number(s.total_amount), s.closed ? "uzavřeno" : "předběžné"]);
+    rows.push([s.name, "", "", "SOUHRN", REWARD_MODEL[s.model ?? "program"].label, "", "", Number(s.hours), "",
+      Number(s.total_amount), s.closed ? "uzavřeno" : "průběžné"]);
   }
   return toCsv(rows);
 }

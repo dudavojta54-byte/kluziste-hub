@@ -9,9 +9,10 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { REWARD_MODEL } from "@/lib/constants";
-import { fmtHours, fmtMoney, fmtNum, fullName } from "@/lib/format";
-import { useLessonTypes, useLocations, useTeamOverview } from "@/lib/queries";
+import { REWARD_MODEL, TIER, TIER_ORDER } from "@/lib/constants";
+import { fmtHours, fmtMoney, fullName } from "@/lib/format";
+import { useLessonTypes, useLocations, useTeam, useTeamOverview } from "@/lib/queries";
+import type { Tier } from "@/lib/types";
 
 export function TeamTable({ period, onPeriodChange, showExport }: {
   period: string;
@@ -25,11 +26,16 @@ export function TeamTable({ period, onPeriodChange, showExport }: {
   const types = useLessonTypes();
   const locations = useLocations();
   const data = useTeamOverview(period, type || null, loc || null);
+  const team = useTeam();
+  const tierOf = (id: string) => (team.data?.find((p) => p.id === id)?.tier ?? "flexible") as Tier;
 
   const rows = useMemo(() => {
     const needle = q.trim().toLowerCase();
-    return (data.data ?? []).filter((r) => !needle || fullName(r).toLowerCase().includes(needle));
-  }, [data.data, q]);
+    return (data.data ?? [])
+      .filter((r) => !needle || fullName(r).toLowerCase().includes(needle))
+      .sort((a, b) => TIER_ORDER[tierOf(a.user_id)] - TIER_ORDER[tierOf(b.user_id)] || Number(b.hours) - Number(a.hours));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [data.data, q, team.data]);
 
   const totals = rows.reduce(
     (a, r) => ({
@@ -77,10 +83,10 @@ export function TeamTable({ period, onPeriodChange, showExport }: {
             <TableHeader>
               <TableRow>
                 <TableHead>Instruktor</TableHead>
-                <TableHead className="text-right">Hodiny</TableHead>
-                <TableHead className="text-right">Kredity</TableHead>
-                <TableHead className="text-right">Potvrzené lekce</TableHead>
-                {user.isAdmin && <TableHead className="text-right">Odhad odměny</TableHead>}
+                <TableHead>Úroveň</TableHead>
+                <TableHead className="text-right">Odučeno</TableHead>
+                <TableHead className="text-right">Obsazené lekce</TableHead>
+                {user.isAdmin && <TableHead className="text-right">Odměna</TableHead>}
                 <TableHead>Stav</TableHead>
               </TableRow>
             </TableHeader>
@@ -93,16 +99,13 @@ export function TeamTable({ period, onPeriodChange, showExport }: {
                       {fullName(r)}
                     </Link>
                   </TableCell>
+                  <TableCell><ToneBadge tone={TIER[tierOf(r.user_id)].tone}>{TIER[tierOf(r.user_id)].label}</ToneBadge></TableCell>
                   <TableCell className="text-right tabular-nums">{fmtHours(r.hours)}</TableCell>
-                  <TableCell className="text-right tabular-nums">
-                    {fmtNum(Number(r.lesson_credits) + Number(r.bonus_credits))}
-                    {Number(r.bonus_credits) > 0 && <span className="ml-1 text-xs text-muted-foreground">(+{fmtNum(r.bonus_credits)} b)</span>}
-                  </TableCell>
                   <TableCell className="text-right tabular-nums">{r.confirmed_lessons}</TableCell>
                   {user.isAdmin && (
                     <TableCell className="text-right tabular-nums">
                       {filtered ? "—" : fmtMoney(r.reward)}
-                      {r.model && !filtered && <div className="text-[11px] text-muted-foreground">{REWARD_MODEL[r.model].label}</div>}
+                      {r.model && r.model !== "program" && !filtered && <div className="text-[11px] text-muted-foreground">{REWARD_MODEL[r.model].label}</div>}
                     </TableCell>
                   )}
                   <TableCell>
@@ -111,14 +114,14 @@ export function TeamTable({ period, onPeriodChange, showExport }: {
                 </TableRow>
               ))}
               {rows.length === 0 && (
-                <TableRow><TableCell colSpan={6} className="py-8 text-center text-muted-foreground">Žádní instruktoři.</TableCell></TableRow>
+                <TableRow><TableCell colSpan={7} className="py-8 text-center text-muted-foreground">Žádní instruktoři.</TableCell></TableRow>
               )}
             </TableBody>
             <TableFooter>
               <TableRow>
                 <TableCell>Celkem</TableCell>
+                <TableCell />
                 <TableCell className="text-right tabular-nums">{fmtHours(totals.hours)}</TableCell>
-                <TableCell className="text-right tabular-nums">{fmtNum(totals.credits)}</TableCell>
                 <TableCell className="text-right tabular-nums">{totals.lessons}</TableCell>
                 {user.isAdmin && <TableCell className="text-right tabular-nums">{filtered ? "—" : fmtMoney(totals.reward)}</TableCell>}
                 <TableCell />
